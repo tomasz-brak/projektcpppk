@@ -3,5 +3,12 @@ project(projekt)
 
 set(CMAKE_CXX_STANDARD 26)
 
-add_executable(projekt main.cpp serializable.cpp)
+add_executable(projekt main.cpp
+        Serializable.cpp
+        Serializable.h
+        storeClassList.cpp
+        storeClassList.h
+        ISerializable.cpp
+        ISerializable.h
+)
 
