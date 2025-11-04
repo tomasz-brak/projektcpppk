@@ -3,5 +3,5 @@ project(projekt)
 
 set(CMAKE_CXX_STANDARD 26)
 
-add_executable(projekt main.cpp
-        main.cpp)
+add_executable(projekt main.cpp serializable.cpp)
+
