@@ -26,9 +26,9 @@ jobs:
 
       - name: Verify build output
         run: dir build\Release
-
+        
       - name: Upload executable artifact
         uses: actions/upload-artifact@v4
         with:
-          name: main-exe
-          path: build/Release/main.exe
+          name: exe-artifacts
+          path: build/Release/*.exe
