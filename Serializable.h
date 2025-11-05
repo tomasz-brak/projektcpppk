@@ -7,9 +7,7 @@
 #include <format>
 #include <functional>
 #include <string>
-#include <iostream>
 #include <memory>
-#include <vector>
 
 #include "ISerializable.h"
 
@@ -18,6 +16,7 @@ template<typename Derived>
 class Serializable : public ISerializable {
 public:
     ~Serializable() override = default;
+
     template <typename... Args>
     static std::shared_ptr<Derived> create(Args&&... args) {
         return std::make_shared<Derived>(std::forward<Args>(args)...);

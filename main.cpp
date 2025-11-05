@@ -3,18 +3,21 @@
 #include <iostream>
 
 #include "Serializable.h"
+#include "ISerializable.h"
 #include "storeClassList.h"
 
 class Client : public Serializable<Client> {
 public:
-    std::string name = "client" ;
-    int id;
+    int id = 0;
+    std::string test;
+
 
     std::string getPrimaryKey() override {
         return defaultToString(id);
     }
     Client() {
-        registerField("name", name, identity<std::string>);
+        this->name = "Client";
+        registerField("name", test, identity<std::string>);
         registerField("id", id, defaultToString<int>);
     }
 
@@ -24,10 +27,10 @@ public:
 int main(const int argc, const char * argv[]) {
     auto a = Client::create();
     a->id =1;
-    a->name = "hello";
+    a->test = "hello";
     auto b = Client::create();
     b->id =2;
-    b->name = "world";
+    b->test = "world";
     const std::vector<std::shared_ptr<ISerializable>> c = {a, b};
     storeClass(c);
 }
