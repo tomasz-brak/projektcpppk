@@ -4,6 +4,7 @@
 
 #include "serializable.h"
 #include <fstream>
+#include <algorithm>
 #include <iostream>
 #include <memory>
 
