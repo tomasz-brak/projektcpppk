@@ -13,9 +13,10 @@
 enum tokenType {
     UNKNOWN,
 
-    STRING,
-    DICT,
-    ARRAY,
+    STRING, // 1
+    KEY, // 2
+    DICT, // 3
+    ARRAY, // 4
 };
 
 class Token {
@@ -24,10 +25,11 @@ class Token {
         std::vector<std::shared_ptr<Token> > children;
         tokenType type;
         std::vector<std::shared_ptr<charData> > content;
-        std::vector<std::shared_ptr<charData> > key;
         Token();
         [[nodiscard]] std::string contentAsString() const;
         [[nodiscard]] std::string toString(int scope) const;
+        std::shared_ptr<Token> value;
+        std::shared_ptr<Token> key;
 };
 
 

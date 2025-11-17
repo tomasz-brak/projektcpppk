@@ -3,6 +3,7 @@
 //
 
 #include "Token.h"
+#include <string>
 
 Token::Token()
     : parent(nullptr)
@@ -22,10 +23,10 @@ std::string Token::toString(const int scope) const {
     out.append(scope*2, ' ');
     switch (this->type) {
         case tokenType::UNKNOWN:
-            out += "<Token> UNKNOWN";
+            out += "<Token> UNKNOWN ";
             break;
         case tokenType::STRING:
-            out +=  std::format("<Token> \"{}\"", contentAsString());
+            out +=  std::format("<Token> STRING");
             break;
         case tokenType::ARRAY:
             out += "<Token> ARRAY ";
@@ -33,13 +34,22 @@ std::string Token::toString(const int scope) const {
         case tokenType::DICT:
             out += "TOKEN DICT ";
             break;
+        case tokenType::KEY:
+            out += "<Token> KEY ";
+            out += " value: " + this->value->toString(scope);
+            break;
     }
     // for (const auto &child: this->children) {
     //     out += std::format(" {}", this->contentAsString());
     //     out += '\n';
     //     out += child->toString(scope + 1);
     // }
-    out += " " + contentAsString();
+    out += std::to_string(this->type) + ". " + contentAsString();
+    if (this->parent != nullptr) {
+        out += " parent: " + std::to_string(this->parent->type);
+    }else {
+        out += " parent: NULL";
+    }
     out += "\n";
     for (const auto &child: this->children) {
         out += child->toString(scope+1);

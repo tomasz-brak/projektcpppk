@@ -233,7 +233,6 @@ std::optional<std::size_t> ParseToken(const std::string::const_iterator ch,
         return std::nullopt;
     }
 
-    // If we are currently inside a string, handle string characters / closing quote
     if (status->string_since >= 0 && *ch == '\"') {
         // closing quote
         status->string_since = -1;
@@ -242,13 +241,11 @@ std::optional<std::size_t> ParseToken(const std::string::const_iterator ch,
             tokenStack.pop();
             return opened_by;
         } else {
-            // malformed string (no opener) — ignore
             return std::nullopt;
         }
     }
 
     if (status->string_since >= 0) {
-        // still inside string content
         status->string_since += 1;
         return std::nullopt; // Stop parsing other tokens while inside string
     }
@@ -367,37 +364,43 @@ tokenType whatTokenIs(const char ch) {
     }
 }
 
-[[nodiscard]] std::shared_ptr<Token> assembleTokenTree(std::span<std::shared_ptr<charData> > chars) {
-    auto root = std::make_shared<Token>();
+[[nodiscard]] std::shared_ptr<Token> assembleTokenTree(std::span<std::shared_ptr<charData> > chars, std::shared_ptr<Token> parent) {
     for (size_t i = 0; i < chars.size(); ++i) {
         if (chars[i]->status->closed_by.has_value()){
-            root->content.emplace_back(chars[i]);
-            root->type = whatTokenIs(chars[i]->ch);
+            auto child = std::make_shared<Token>();
+            parent->content.emplace_back(chars[i]);
+            child->type = whatTokenIs(chars[i]->ch);
             auto inner_span = chars.subspan(i + 1, chars[i]->status->closed_by.value() - 1);
-            auto c = assembleTokenTree(inner_span);
+            auto c = assembleTokenTree(inner_span, child);
             std::cout << "calling assembleTokenTree with; " << [inner_span]() {
                 std::string out; for (const auto& sp : inner_span) {
                     out += sp->ch;
                 }
                 return out;
             }() << std::endl;
-            c->parent = root;
-            if (root->type == DICT) {
-                // Find all keys if
+            child->parent = parent;
+            parent->children.emplace_back(child);
+            if (parent->type == DICT and parent->children.size() % 2 == 1) {
+                child->type = KEY;
             }
-            root->children.emplace_back(std::move(c));
+            if (parent->type == DICT and parent->children.size() % 2 == 0) {
+                parent->children.back()->value = child;
+                child->key = parent->children.back();
+            }
             i += chars[i]->status->closed_by.value()-1;
         } else {
-            root->content.emplace_back(chars[i]);
+            parent->content.emplace_back(chars[i]);
         }
     }
 
 
-    return root;
+    return parent;
 }
 
 std::shared_ptr<Token> assembleTokenTree(std::vector<std::shared_ptr<charData>>& vec) {
-    return assembleTokenTree(std::span(vec));
+    auto root = std::make_shared<Token>();
+
+    return assembleTokenTree(std::span(vec), root);
 }
 
 
