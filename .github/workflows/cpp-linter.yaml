@@ -1,26 +1,85 @@
-name: cpp-linter
 on:
-  pull_request:
-    paths: ['**.c', '**.cpp', '**.h', '**.hpp', '**.cxx', '**.hxx', '**.cc', '**.hh', '**CMakeLists.txt', 'meson.build', '**.cmake']
-  push:
-    paths: ['**.c', '**.cpp', '**.h', '**.hpp', '**.cxx', '**.hxx', '**.cc', '**.hh', '**CMakeLists.txt', 'meson.build', '**.cmake']
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to run formatting on'
+        required: true
+        default: 'main'
+      commit_changes:
+        description: 'Whether to automatically commit & push formatting fixes (true/false)'
+        required: true
+        default: 'true'
 
 jobs:
-  cpp-linter:
+  clang-format:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-
-      # ... optionally setup build env to create a compilation database
-
-      - uses: cpp-linter/cpp-linter-action@v2
-        id: linter
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check out target branch
+        uses: actions/checkout@v4
         with:
-          style: 'file'  # Use .clang-format config file. 
-          tidy-checks: '-*' # disable clang-tidy checks. 
+          ref: ${{ inputs.branch }}
+          fetch-depth: 0
+          persist-credentials: true
 
-      - name: Fail fast?!
-        if: steps.linter.outputs.clang-format-checks-failed > 0
-        run: exit 1
+      - name: Install clang-format
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format
+
+      - name: Build list of tracked source files
+        id: files
+        run: |
+          files="$(git ls-files '*.c' '*.cc' '*.cpp' '*.cxx' '*.h' '*.hpp' '*.hh' '*.inl' || true)"
+
+#          files="$(printf '%s\n' "$files" | grep -Ev '(^|/)third_party/|(^|/)(external|vendor)/' || true)"
+
+          echo "file_list<<EOF" >> $GITHUB_OUTPUT
+          printf '%s\n' "$files" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Check & apply clang-format
+        if: ${{ steps.files.outputs.file_list != '' }}
+        run: |
+          set -euo pipefail
+
+          files="${{ steps.files.outputs.file_list }}"
+          if [ -z "$files" ]; then
+            echo "No source files to format."
+            exit 0
+          fi
+
+          echo "Files to check:"
+          printf '%s\n' "$files"
+
+          # Run clang-format in-place, one file per line (safe for spaces)
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            echo "Formatting: $f"
+            clang-format -style=file -i "$f"
+          done <<< "$files"
+
+          # If there are changes, either commit & push or exit non-zero (depending on input)
+          if ! git diff --quiet; then
+            echo "clang-format made changes."
+
+            if [ "${{ inputs.commit_changes }}" = "true" ]; then
+              git config user.name "github-actions[bot]"
+              git config user.email "github-actions[bot]@users.noreply.github.com"
+
+              git add -A
+              git commit -m "style: apply clang-format" || echo "No changes to commit after staging"
+          
+              git push origin HEAD:${{ inputs.branch }}
+              echo "Pushed formatting changes to branch '${{ inputs.branch }}'."
+            else
+              echo "Automatic commit disabled; failing so you can inspect formatting changes."
+              git --no-pager diff --name-only
+              exit 1
+            fi
+          else
+            echo "All files already formatted according to .clang-format."
+          fi
+
+      - name: Nothing to do
+        if: ${{ steps.files.outputs.file_list == '' }}
+        run: echo "No tracked source files found (patterns may need adjusting)."
