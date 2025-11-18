@@ -18,6 +18,8 @@ add_library(projekt_lib
 
 add_executable(projekt
         src/main.cpp
+        src/Klient.cpp
+        src/Klient.h
 )
 
 target_link_libraries(projekt projekt_lib)

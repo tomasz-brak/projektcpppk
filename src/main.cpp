@@ -1,5 +1,7 @@
 // main.cpp
 
+#include "Klient.h"
+
 #include <iostream>
 
 #include "util.h"
@@ -28,4 +30,10 @@ int main(const int argc, char **argv)
     }
   std::cout << "Program will use " << dataDir << " for storing data"
             << std::endl;
+
+  const auto klient=Klient::create();
+  klient->imie="fdfddf";
+  klient->nazwisko="fdfddf";
+
+
 }
