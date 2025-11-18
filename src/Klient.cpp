@@ -6,6 +6,7 @@
 #include "Serializer/Serializable.h"
 Klient::Klient()
 {
-  registerField("imie",&Klient::imie, defaultString<std::string>());
+  this->name = static_name();
 
+  registerField("imie", &Klient::imie, defaultString<std::string>());
 }
