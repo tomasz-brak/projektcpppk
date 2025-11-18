@@ -8,6 +8,7 @@
 #include <functional>
 #include <iostream>
 #include <ostream>
+#include <string>
 #include <iomanip>
 
 struct TestFailure : public std::runtime_error {

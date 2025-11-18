@@ -5,6 +5,7 @@
 #include "test_Serializer.h"
 
 #include <cstring>
+#include <string>
 #include <stack>
 
 #include "test_util.h"
