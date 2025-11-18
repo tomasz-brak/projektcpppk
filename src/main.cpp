@@ -15,16 +15,20 @@ public:
     int id = 0;
     std::string test;
 
+    static const std::string& static_name() {
+        static const std::string name = "Client";
+        return name;
+    }
 
     std::string getPrimaryKey() override {
         return std::to_string(id);
     }
 
     explicit Client() {
-        this->name = "Client";
-        registerField<std::string, defaultString<std::string>, Client>("name", test, defaultString<std::string>());
-        registerField<int, defaultString<int>, Client>("id", id, defaultString<int>());
-        registerFactory(this->name, [](){ return std::make_shared<Client>(); });
+        this->name = static_name();
+        // Use pointers-to-members for type-safe field registration
+        registerField("name", &Client::test, defaultString<std::string>());
+        registerField("id", &Client::id, defaultString<int>());
     }
 
 };
@@ -61,5 +65,3 @@ int main(const int argc, char **argv) {
     }
 
 }
-
-// filepath: main.cpp

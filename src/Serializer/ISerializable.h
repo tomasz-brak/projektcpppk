@@ -51,43 +51,6 @@ public:
     virtual ~ISerializable() = default;
     [[nodiscard]] std::string serialize() const;
 
-
-
-    template<typename T, typename F, typename Derived>
-    void registerField(const std::string &field_name, T &value, F converter) {
-        std::cout << "Registering field: " << field_name << std::endl;
-
-        auto conv_ptr = std::make_shared<F>(std::move(converter));
-        ConverterEntry entry;
-        T *ptr = std::addressof(value);
-
-        entry.to_str = [conv_ptr, ptr]() -> std::optional<std::string> {
-            return conv_ptr->to_string(*ptr);
-        };
-
-        Loader fieldLoader = [conv_ptr, ptr, this](std::shared_ptr<ISerializable> obj, const std::string &s) -> bool {
-            auto derived_obj = std::dynamic_pointer_cast<Derived>(obj);
-            if (!derived_obj) {
-                return false;
-            }
-            auto opt = conv_ptr->from_string(s);
-            if (!opt) return false;
-
-            T* original_ptr = ptr;
-            auto base_address = reinterpret_cast<char*>(this);
-            auto field_offset = reinterpret_cast<char*>(original_ptr) - base_address;
-
-            T* target_ptr = reinterpret_cast<T*>(reinterpret_cast<char*>(derived_obj.get()) + field_offset);
-            *target_ptr = *opt;
-
-            return true;
-        };
-
-        registerLoader(this->name, fieldLoader, field_name);
-
-        converters[field_name] = std::move(entry);
-    }
-
     virtual std::string getPrimaryKey() = 0;
 
     std::unordered_map<std::string, ConverterEntry> converters;
