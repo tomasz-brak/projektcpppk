@@ -14,6 +14,22 @@
 #include <vector>
 #include <optional>
 
+class ISerializable;
+
+using FieldName = std::string;
+using Loader = std::function<std::optional<std::any>(const std::string&)>;
+using LoaderRegistry = std::unordered_map<std::string, std::unordered_map<FieldName, Loader>>;
+
+inline LoaderRegistry &loaderRegistry() {
+    static LoaderRegistry registry;
+    return registry;
+}
+
+inline void registerLoader(const std::string &name, Loader loader, const std::string& field_name) {
+    loaderRegistry()[name][field_name] = std::move(loader);
+}
+
+
 struct ConverterEntry {
     std::function<std::optional<std::string>()> to_str;
     std::function<std::optional<std::any>(const std::string&)> from_str;
@@ -23,6 +39,8 @@ class ISerializable {
 public:
     virtual ~ISerializable() = default;
     [[nodiscard]] std::string serialize() const;
+
+
 
     template<typename T, typename F>
     void registerField(const std::string &field_name, T &value, F converter) {
@@ -42,6 +60,7 @@ public:
             *ptr = *opt;
             return std::any{*opt};
         };
+        registerLoader(this->name, entry.from_str, field_name);
 
         converters[field_name] = std::move(entry);
     }
@@ -52,6 +71,7 @@ public:
 
     std::string name;
 };
+
 
 
 #endif //PROJEKT_ISERIALIZABLE_H

@@ -11,6 +11,8 @@
 #include "../util.h"
 #include "storeClassList.h"
 
+#include <assert.h>
+#include <ranges>
 #include <stack>
 #include <valarray>
 
@@ -118,7 +120,6 @@ void format(const std::string &filename) {
         char ch = src[i];
 
         if (ch == '"') {
-            // If " we enter string
             size_t j = i;
             int backslashes = 0;
             while (j > 0 && src[--j] == '\\') ++backslashes;
@@ -211,11 +212,12 @@ bool storeClass(const std::vector<std::shared_ptr<ISerializable> > &data, const 
     }
 
     result += "]";
-    constexpr auto succes = true;
-    if (succes) {
+    const auto success = writeStr(filename + ".json", result);
+    // constexpr auto succes = true;
+    if (success) {
         format(filename);
     }
-    return succes;
+    return success;
 }
 
 std::shared_ptr<std::vector<std::function<bool(std::shared_ptr<textStatus>)> > > getWorkers() {
@@ -227,7 +229,6 @@ std::optional<std::size_t> ParseToken(const std::string::const_iterator ch,
                                       const std::shared_ptr<textStatus> &status,
                                       const std::string::const_iterator stringBegin,
                                       std::stack<std::size_t> &tokenStack) {
-
     // Only care about escaping for quote characters:
     if (*ch == '"' && isEscaped(stringBegin, ch)) {
         return std::nullopt;
@@ -333,20 +334,23 @@ std::vector<std::shared_ptr<charData> > parseChars(const std::string &input) {
     }
 
     int i = 0;
-    for (const auto& ch : parsedChars) {
+    for (const auto &ch: parsedChars) {
         std::cout << i++ << ". ";
-        std::cout << ch->ch << ": " << (ch->status->opened_by.has_value() ? std::to_string(ch->status->opened_by.value()) : "X") << std::endl;
+        std::cout << ch->ch << ": " << (ch->status->opened_by.has_value()
+                                            ? std::to_string(ch->status->opened_by.value())
+                                            : "X") << std::endl;
     }
 
     i = 0;
-    for (const auto& ch : parsedChars) {
+    for (const auto &ch: parsedChars) {
         std::cout << i++ << ". ";
-        std::cout << ch->ch << ": " << (ch->status->closed_by.has_value() ? std::to_string(ch->status->closed_by.value()) : "X") << std::endl;
+        std::cout << ch->ch << ": " << (ch->status->closed_by.has_value()
+                                            ? std::to_string(ch->status->closed_by.value())
+                                            : "X") << std::endl;
     }
 
     return parsedChars;
 }
-
 
 
 tokenType whatTokenIs(const char ch) {
@@ -364,16 +368,18 @@ tokenType whatTokenIs(const char ch) {
     }
 }
 
-[[nodiscard]] std::shared_ptr<Token> assembleTokenTree(std::span<std::shared_ptr<charData> > chars, std::shared_ptr<Token> parent) {
+[[nodiscard]] std::shared_ptr<Token> assembleTokenTree(std::span<std::shared_ptr<charData> > chars,
+                                                       std::shared_ptr<Token> parent) {
     for (size_t i = 0; i < chars.size(); ++i) {
-        if (chars[i]->status->closed_by.has_value()){
+        if (chars[i]->status->closed_by.has_value()) {
             auto child = std::make_shared<Token>();
             parent->content.emplace_back(chars[i]);
             child->type = whatTokenIs(chars[i]->ch);
             auto inner_span = chars.subspan(i + 1, chars[i]->status->closed_by.value() - 1);
             auto c = assembleTokenTree(inner_span, child);
             std::cout << "calling assembleTokenTree with; " << [inner_span]() {
-                std::string out; for (const auto& sp : inner_span) {
+                std::string out;
+                for (const auto &sp: inner_span) {
                     out += sp->ch;
                 }
                 return out;
@@ -384,10 +390,12 @@ tokenType whatTokenIs(const char ch) {
                 child->type = KEY;
             }
             if (parent->type == DICT and parent->children.size() % 2 == 0) {
-                parent->children.back()->value = child;
-                child->key = parent->children.back();
+                // The key is the second-to-last child.
+                auto &key_token = parent->children[parent->children.size() - 2];
+                key_token->value = child;
+                child->key = key_token;
             }
-            i += chars[i]->status->closed_by.value()-1;
+            i += chars[i]->status->closed_by.value() - 1;
         } else {
             parent->content.emplace_back(chars[i]);
         }
@@ -397,14 +405,69 @@ tokenType whatTokenIs(const char ch) {
     return parent;
 }
 
-std::shared_ptr<Token> assembleTokenTree(std::vector<std::shared_ptr<charData>>& vec) {
+std::shared_ptr<Token> assembleTokenTree(std::vector<std::shared_ptr<charData> > &vec, const std::string &name) {
     auto root = std::make_shared<Token>();
-
+    root->FileName = name;
     return assembleTokenTree(std::span(vec), root);
 }
 
+void loadClass(const std::shared_ptr<Token> &tokenTree, std::vector<std::shared_ptr<ISerializable> > &data) {
+    assert(!tokenTree->children.empty()); // Root token is not empty
+    assert(!tokenTree->FileName.empty()); // Root token has a filename
+    assert(tokenTree->children[0]->type == ARRAY); // Root contains an array of classes
+    for (const auto &datapoint: tokenTree->children[0]->children) {
+        std::cout << "Loading datapoint..." << std::endl;
 
-bool readClass(const char *name, const std::vector<std::shared_ptr<ISerializable> > &data, const std::string &dataDir) {
+        assert(datapoint->type == DICT); // Class is represented by key - value pairs
+        assert(loaderRegistry().contains(tokenTree->FileName)); // Loader for this class exists
+        auto loaders = loaderRegistry().at(tokenTree->FileName);
+        std::cout << "Available loaders for all classes" << ":\n";
+        for (const auto &key: loaders | std::views::keys) {
+            std::cout << key << "\n";
+        }
+
+        std::shared_ptr<ISerializable> instance;
+
+        for (auto dict: datapoint->children) {
+            if (dict->key == nullptr and dict->parent->type == DICT) {
+                continue;
+            }
+            std::cout << "Loading datapoint with content: " << dict->key->contentAsString() << "." << std::endl;
+            if (loaders.contains(dict->key->contentAsString())) {
+                if (dict->key->value == nullptr) {
+                    std::cout << dict->key->toString(0) << std::endl;
+                    std::cerr << "No value for key: " << dict->key->contentAsString() << " in class "
+                              << tokenTree->FileName << std::endl;
+                    continue;
+                }
+                auto response = loaders.at(dict->key->contentAsString())(dict->key->value->contentAsString());
+                if (!response.has_value()) {
+                    std::cerr << "Loader failed for field: " << dict->key->contentAsString() << " in class "
+                              << tokenTree->FileName << std::endl;
+                    continue;
+                }
+                try {
+                    auto classPointer = std::any_cast<std::shared_ptr<ISerializable>>(response.value());
+                    data.emplace_back(classPointer);
+                } catch (const std::bad_any_cast& e) {
+                    std::cerr << "Failed to cast loader response for key: " << dict->key->contentAsString()
+                              << ". Error: " << e.what() << std::endl;
+                }
+            } else {
+                std::cout << "Available loaders for class " << tokenTree->FileName << ":\n" ;
+
+                for (const auto &key: loaders | std::views::keys) {
+                    std::cout << key << "\n";
+                }
+                std::cerr << "No loader for field: " << dict->key->contentAsString() << " in class "
+                          << tokenTree->FileName << std::endl;
+            }
+        }
+    }
+}
+
+
+bool readClass(const char *name, std::vector<std::shared_ptr<ISerializable> > &data, const std::string &dataDir) {
     const std::string filename = dataDir + "/" + name + ".json";
     std::string fileContent;
 
@@ -412,11 +475,12 @@ bool readClass(const char *name, const std::vector<std::shared_ptr<ISerializable
         std::cout << "Nie udalo sie otworzyc pliku do odczytu: " << filename << std::endl;
         return false;
     } else {
-        fileContent = {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
+        fileContent = {std::istreambuf_iterator(file), std::istreambuf_iterator<char>()};
     }
     fileContent = removeWhitespacePreserveStrings(fileContent);
     auto parsedChars = parseChars(fileContent);
-    auto tokenTree = assembleTokenTree(parsedChars);
+    auto tokenTree = assembleTokenTree(parsedChars, name);
     std::cout << tokenTree->toString(0) << std::endl;
+    loadClass(tokenTree, data);
     return true;
 }

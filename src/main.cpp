@@ -50,8 +50,15 @@ int main(const int argc, char **argv) {
     storeClass(c, dataDir);
     b->test = "mars";
     storeClass(c, dataDir);
-    const std::vector<std::shared_ptr<ISerializable>> fromFileVec;
+    std::vector<std::shared_ptr<ISerializable>> fromFileVec;
     readClass("Client", fromFileVec, dataDir);
+    for (const auto &item: fromFileVec) {
+        auto client = std::dynamic_pointer_cast<Client>(item);
+        if (client) {
+            std::cout << "Client id: " << client->id << ", test: " << client->test << std::endl;
+        }
+    }
+
 }
 
 // filepath: main.cpp

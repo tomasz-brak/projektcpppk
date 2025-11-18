@@ -17,10 +17,12 @@ enum tokenType {
     KEY, // 2
     DICT, // 3
     ARRAY, // 4
+    ROOT_FILE // 5
 };
 
 class Token {
     public:
+        std::string FileName;
         std::shared_ptr<Token> parent;
         std::vector<std::shared_ptr<Token> > children;
         tokenType type;

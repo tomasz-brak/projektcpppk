@@ -11,6 +11,9 @@ Token::Token()
 }
 
 std::string Token::contentAsString() const {
+    if (this->content.empty()) {
+        return "";
+    }
     std::string out;
     for (const auto &ch: this->content) {
         out += ch->ch;
@@ -23,36 +26,32 @@ std::string Token::toString(const int scope) const {
     out.append(scope*2, ' ');
     switch (this->type) {
         case tokenType::UNKNOWN:
-            out += "<Token> UNKNOWN ";
+            out += "<Token t='UNKNOWN'>";
             break;
         case tokenType::STRING:
-            out +=  std::format("<Token> STRING");
+            out += "<Token t='String'>";
             break;
         case tokenType::ARRAY:
-            out += "<Token> ARRAY ";
+            out += "<Token t='Array'>";
             break;
         case tokenType::DICT:
-            out += "TOKEN DICT ";
+            out += "<Token t='Dict'>";
             break;
         case tokenType::KEY:
-            out += "<Token> KEY ";
-            out += " value: " + this->value->toString(scope);
+            out += "<Token t='Key'>";
             break;
     }
-    // for (const auto &child: this->children) {
-    //     out += std::format(" {}", this->contentAsString());
-    //     out += '\n';
-    //     out += child->toString(scope + 1);
-    // }
-    out += std::to_string(this->type) + ". " + contentAsString();
-    if (this->parent != nullptr) {
-        out += " parent: " + std::to_string(this->parent->type);
-    }else {
-        out += " parent: NULL";
+    if (this->value != nullptr) {
+        out += " value: '" + this->value->contentAsString()+ '\'';
     }
+    if (this->key != nullptr) {
+        out += " key : '" + this->key->contentAsString() + '\'';
+    }
+
     out += "\n";
     for (const auto &child: this->children) {
         out += child->toString(scope+1);
     }
+
     return out;
 }
