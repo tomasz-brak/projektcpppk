@@ -415,56 +415,53 @@ void loadClass(const std::shared_ptr<Token> &tokenTree, std::vector<std::shared_
     assert(!tokenTree->children.empty()); // Root token is not empty
     assert(!tokenTree->FileName.empty()); // Root token has a filename
     assert(tokenTree->children[0]->type == ARRAY); // Root contains an array of classes
+
+    const std::string& className = tokenTree->FileName;
+    if (!loaderRegistry().contains(className)) {
+        std::cerr << "No loaders registered for class: " << className << std::endl;
+        return;
+    }
+    const auto& loaders = loaderRegistry().at(className);
+
+    if (!factoryRegistry().contains(className)) {
+        std::cerr << "No factory registered for class: " << className << std::endl;
+        return;
+    }
+    const auto& factory = factoryRegistry().at(className);
+
     for (const auto &datapoint: tokenTree->children[0]->children) {
         std::cout << "Loading datapoint..." << std::endl;
+        assert(datapoint->type == DICT); // Class is represented by key-value pairs
 
-        assert(datapoint->type == DICT); // Class is represented by key - value pairs
-        assert(loaderRegistry().contains(tokenTree->FileName)); // Loader for this class exists
-        auto loaders = loaderRegistry().at(tokenTree->FileName);
-        std::cout << "Available loaders for all classes" << ":\n";
-        for (const auto &key: loaders | std::views::keys) {
-            std::cout << key << "\n";
+        auto instance = factory();
+        if (!instance) {
+            std::cerr << "Factory failed for class: " << className << std::endl;
+            continue;
         }
 
-        std::shared_ptr<ISerializable> instance;
-
-        for (auto dict: datapoint->children) {
-            if (dict->key == nullptr and dict->parent->type == DICT) {
-                continue;
+        // Iterate over key-value pairs in the JSON object to populate the instance.
+        for (auto dict_child: datapoint->children) {
+            if (dict_child->type != KEY || dict_child->value == nullptr) {
+                continue; // Skip values without keys or keys without values.
             }
-            std::cout << "Loading datapoint with content: " << dict->key->contentAsString() << "." << std::endl;
-            if (loaders.contains(dict->key->contentAsString())) {
-                if (dict->key->value == nullptr) {
-                    std::cout << dict->key->toString(0) << std::endl;
-                    std::cerr << "No value for key: " << dict->key->contentAsString() << " in class "
-                              << tokenTree->FileName << std::endl;
-                    continue;
-                }
-                auto response = loaders.at(dict->key->contentAsString())(dict->key->value->contentAsString());
-                if (!response.has_value()) {
-                    std::cerr << "Loader failed for field: " << dict->key->contentAsString() << " in class "
-                              << tokenTree->FileName << std::endl;
-                    continue;
-                }
-                try {
-                    auto classPointer = std::any_cast<std::shared_ptr<ISerializable>>(response.value());
-                    data.emplace_back(classPointer);
-                } catch (const std::bad_any_cast& e) {
-                    std::cerr << "Failed to cast loader response for key: " << dict->key->contentAsString()
-                              << ". Error: " << e.what() << std::endl;
+
+            const std::string& key = dict_child->contentAsString();
+            std::cout << "Loading field with key: " << key << "." << std::endl;
+
+            if (loaders.contains(key)) {
+                const auto& fieldLoader = loaders.at(key);
+                // The field loader modifies the 'instance' directly.
+                if (!fieldLoader(instance, dict_child->value->contentAsString())) {
+                    std::cerr << "Loader failed for field: " << key << " in class " << className << std::endl;
                 }
             } else {
-                std::cout << "Available loaders for class " << tokenTree->FileName << ":\n" ;
-
-                for (const auto &key: loaders | std::views::keys) {
-                    std::cout << key << "\n";
-                }
-                std::cerr << "No loader for field: " << dict->key->contentAsString() << " in class "
-                          << tokenTree->FileName << std::endl;
+                std::cerr << "No loader for field: " << key << " in class " << className << std::endl;
             }
         }
+        data.emplace_back(instance);
     }
 }
+
 
 
 bool readClass(const char *name, std::vector<std::shared_ptr<ISerializable> > &data, const std::string &dataDir) {

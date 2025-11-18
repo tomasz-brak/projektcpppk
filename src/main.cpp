@@ -22,8 +22,9 @@ public:
 
     explicit Client() {
         this->name = "Client";
-        registerField("name", test, defaultString<std::string>());
-        registerField("id", id, defaultString<int>());
+        registerField<std::string, defaultString<std::string>, Client>("name", test, defaultString<std::string>());
+        registerField<int, defaultString<int>, Client>("id", id, defaultString<int>());
+        registerFactory(this->name, [](){ return std::make_shared<Client>(); });
     }
 
 };
