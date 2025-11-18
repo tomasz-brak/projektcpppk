@@ -15,14 +15,11 @@ public:
     int id = 0;
     std::string test;
 
-    static const std::string& static_name() {
+    static const std::string &static_name() {
         static const std::string name = "Client";
         return name;
     }
 
-    std::string getPrimaryKey() override {
-        return std::to_string(id);
-    }
 
     explicit Client() {
         this->name = static_name();
@@ -30,11 +27,13 @@ public:
         registerField("name", &Client::test, defaultString<std::string>());
         registerField("id", &Client::id, defaultString<int>());
     }
-
 };
 
 int main(const int argc, char **argv) {
-    SetConsoleOutputCP( 65001 );
+    /* --------------------- */
+    /* --- PROGRAM SETUP --- */
+    /* --------------------- */
+    SetConsoleOutputCP(65001);
     // Parse argv
     auto args = argParser(argc, argv);
     std::string dataDir;
@@ -43,19 +42,20 @@ int main(const int argc, char **argv) {
     } else {
         dataDir = "./";
     }
-    std::cout << "Program will use " << dataDir << " for storing data" << std::endl ;
+    std::cout << "Program will use " << dataDir << " for storing data" << std::endl;
+
 
     const auto a = Client::create();
-    a->id =1;
+    a->id = 1;
     a->test = "hello";
     auto b = Client::create();
-    b->id =2;
+    b->id = 2;
     b->test = "world";
-    const std::vector<std::shared_ptr<ISerializable>> c = {a, b};
+    const std::vector<std::shared_ptr<ISerializable> > c = {a, b};
     storeClass(c, dataDir);
     b->test = "mars";
     storeClass(c, dataDir);
-    std::vector<std::shared_ptr<ISerializable>> fromFileVec;
+    std::vector<std::shared_ptr<ISerializable> > fromFileVec;
     readClass("Client", fromFileVec, dataDir);
     for (const auto &item: fromFileVec) {
         auto client = std::dynamic_pointer_cast<Client>(item);
@@ -63,5 +63,4 @@ int main(const int argc, char **argv) {
             std::cout << "Client id: " << client->id << ", test: " << client->test << std::endl;
         }
     }
-
 }

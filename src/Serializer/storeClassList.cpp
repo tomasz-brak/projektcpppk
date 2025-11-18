@@ -20,12 +20,6 @@
 
 constexpr char SEPARATOR_LINE = '=';
 
-std::string getSourceDir() {
-    const std::string path = __FILE__;
-    const auto pos = path.find_last_of("/\\");
-    return path.substr(0, pos + 1);
-}
-
 bool writeStr(const std::string &filename, const std::string &str) {
     const std::string filePath = filename;
     std::cout << "Opening: " << filePath << std::endl;
@@ -60,17 +54,6 @@ bool isEscaped(const std::string::const_iterator &begin, std::string::const_iter
             break;
     }
     return (backslashes % 2) == 1;
-}
-
-void separateParenthesis(std::string &data) {
-    std::string result;
-    for (auto it = data.begin(); it != data.end(); ++it) {
-        result += *it;
-        if ((result == "[" or result == "]" or result == "{" or result == "}") and *(it + 1) != '\n') {
-            result += "\n";
-        }
-    }
-    data = result;
 }
 
 std::string removeWhitespacePreserveStrings(const std::string &s) {
@@ -205,8 +188,7 @@ bool storeClass(const std::vector<std::shared_ptr<ISerializable> > &data, const 
         std::cout << filename << std::endl;
         result += (*it)->serialize();
         if (it != data.end() - 1) {
-            result += ",\n";
-            continue;
+            result += ",";
         }
         result += "\n";
     }
@@ -218,11 +200,6 @@ bool storeClass(const std::vector<std::shared_ptr<ISerializable> > &data, const 
         format(filename);
     }
     return success;
-}
-
-std::shared_ptr<std::vector<std::function<bool(std::shared_ptr<textStatus>)> > > getWorkers() {
-    static auto workers = std::make_shared<std::vector<std::function<bool(std::shared_ptr<textStatus>)> > >();
-    return workers;
 }
 
 std::optional<std::size_t> ParseToken(const std::string::const_iterator ch,
@@ -248,7 +225,7 @@ std::optional<std::size_t> ParseToken(const std::string::const_iterator ch,
 
     if (status->string_since >= 0) {
         status->string_since += 1;
-        return std::nullopt; // Stop parsing other tokens while inside string
+        return std::nullopt;
     }
 
     // Not inside string: check for opening quote
@@ -261,21 +238,12 @@ std::optional<std::size_t> ParseToken(const std::string::const_iterator ch,
     // Non-string tokens
     switch (*ch) {
         case '{':
-            getWorkers()->emplace_back([](const std::shared_ptr<textStatus> &status) {
-                status->dict_scope++;
-                return true; // one-shot worker
-            });
             tokenStack.emplace(std::distance(stringBegin, ch));
             break;
         case '[':
-            getWorkers()->emplace_back([](const std::shared_ptr<textStatus> &status) {
-                status->array_scope++;
-                return true;
-            });
             tokenStack.emplace(std::distance(stringBegin, ch));
             break;
         case '}':
-            status->dict_scope--;
             if (!tokenStack.empty()) {
                 auto opened_by = tokenStack.top();
                 tokenStack.pop();
@@ -284,14 +252,12 @@ std::optional<std::size_t> ParseToken(const std::string::const_iterator ch,
             break;
 
         case ']':
-            status->array_scope--;
             if (!tokenStack.empty()) {
                 auto opened_by = tokenStack.top();
                 tokenStack.pop();
                 return opened_by;
             }
             break;
-
         default: ;
     }
     return std::nullopt;
@@ -307,14 +273,7 @@ std::vector<std::shared_ptr<charData> > parseChars(const std::string &input) {
     parserState->ch = input.begin();
 
     for (auto it = input.begin(); it != input.end(); ++it) {
-        {
-            auto &workers = *getWorkers();
-            std::erase_if(workers,
-                          [&parserState](const auto &worker) { return worker(parserState); });
-        }
-
         auto chStatus = std::make_shared<textStatus>(*parserState);
-        chStatus->opened_by = std::nullopt;
         chStatus->closed_by = std::nullopt;
         chStatus->ch = it;
 
@@ -323,7 +282,6 @@ std::vector<std::shared_ptr<charData> > parseChars(const std::string &input) {
             if (opened_idx < parsedChars.size()) {
                 parsedChars[opened_idx]->status->closed_by = std::distance(input.begin(), it) - opened_idx;
             }
-            chStatus->opened_by = opened_idx;
         }
 
         auto chData = std::make_shared<charData>();
@@ -332,23 +290,6 @@ std::vector<std::shared_ptr<charData> > parseChars(const std::string &input) {
 
         parsedChars.emplace_back(std::move(chData));
     }
-
-    int i = 0;
-    for (const auto &ch: parsedChars) {
-        std::cout << i++ << ". ";
-        std::cout << ch->ch << ": " << (ch->status->opened_by.has_value()
-                                            ? std::to_string(ch->status->opened_by.value())
-                                            : "X") << std::endl;
-    }
-
-    i = 0;
-    for (const auto &ch: parsedChars) {
-        std::cout << i++ << ". ";
-        std::cout << ch->ch << ": " << (ch->status->closed_by.has_value()
-                                            ? std::to_string(ch->status->closed_by.value())
-                                            : "X") << std::endl;
-    }
-
     return parsedChars;
 }
 
@@ -377,13 +318,7 @@ tokenType whatTokenIs(const char ch) {
             child->type = whatTokenIs(chars[i]->ch);
             auto inner_span = chars.subspan(i + 1, chars[i]->status->closed_by.value() - 1);
             auto c = assembleTokenTree(inner_span, child);
-            std::cout << "calling assembleTokenTree with; " << [inner_span]() {
-                std::string out;
-                for (const auto &sp: inner_span) {
-                    out += sp->ch;
-                }
-                return out;
-            }() << std::endl;
+
             child->parent = parent;
             parent->children.emplace_back(child);
             if (parent->type == DICT and parent->children.size() % 2 == 1) {

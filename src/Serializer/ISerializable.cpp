@@ -11,7 +11,7 @@ std::string ISerializable::serialize() const {
     result += "{\n";
     for (auto it  = converters.begin(); it != converters.end(); ++it) {
         if (!it->second.to_str().has_value()) {
-            std::cout << "Conversion failuire for: " << it->first << std::endl;
+            std::cerr << "Conversion failuire for: " << it->first << std::endl;
             continue;
         }
         result += "\"" + it->first + "\"" + ": \"" + it->second.to_str().value() + "\"";

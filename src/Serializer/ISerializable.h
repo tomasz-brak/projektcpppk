@@ -50,8 +50,6 @@ public:
     virtual ~ISerializable() = default;
     [[nodiscard]] std::string serialize() const;
 
-    virtual std::string getPrimaryKey() = 0;
-
     std::unordered_map<std::string, ConverterEntry> converters;
 
     std::string name;
