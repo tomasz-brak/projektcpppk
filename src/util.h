@@ -8,14 +8,12 @@
 #include <unordered_map>
 #include <vector>
 
-
 std::vector<std::string> splitString(std::string s, const std::string &d);
 
 typedef std::unordered_map<std::string, std::string> argMap;
 
 argMap argParser(int argc, char *argv[]);
 
-void createDirectories(const std::string& dir);
+void createDirectories(const std::string &dir);
 
-
-#endif //PROJEKT_UTIL_H
+#endif // PROJEKT_UTIL_H
