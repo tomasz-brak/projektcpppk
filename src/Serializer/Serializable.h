@@ -38,15 +38,15 @@ public:
         return std::make_shared<Derived>(std::forward<Args>(args)...);
     }
 
-    template<typename T, typename F>
-    void registerField(const std::string &field_name, T Derived::*member_ptr, F converter) {
+    template<typename MemberType, typename TConverter>
+    void registerField(const std::string &field_name, MemberType Derived::*member_ptr, TConverter converter) {
         std::cout << "Registering field: " << field_name << " for " << this->name << std::endl;
 
-        auto conv_ptr = std::make_shared<F>(std::move(converter));
+        auto conv_ptr = std::make_shared<TConverter>(std::move(converter));
         ConverterEntry entry;
 
         entry.to_str = [this, conv_ptr, member_ptr]() -> std::optional<std::string> {
-            Derived* self = static_cast<Derived*>(this);
+            auto* self = static_cast<Derived*>(this);
             return conv_ptr->to_string(self->*member_ptr);
         };
 
@@ -60,7 +60,6 @@ public:
             if (!opt) {
                 return false;
             }
-
 
             (derived_obj.get()->*member_ptr) = *opt;
 

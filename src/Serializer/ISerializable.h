@@ -43,7 +43,6 @@ inline void registerFactory(const std::string &name, Factory factory) {
 
 struct ConverterEntry {
     std::function<std::optional<std::string>()> to_str;
-    std::function<std::optional<std::any>(const std::string&)> from_str;
 };
 
 class ISerializable {
