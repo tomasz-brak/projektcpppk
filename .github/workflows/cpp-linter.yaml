@@ -1,9 +1,10 @@
 # .github/workflows/clang_format_action.yaml
-#
-# A GitHub Action workflow to manually trigger clang-format on a branch.
-# It checks for formatting issues, applies fixes, and commits them back to the branch.
+
 
 name: 'Clang-Format'
+
+permissions:
+  contents: write
 
 on:
   workflow_dispatch:
@@ -63,6 +64,8 @@ jobs:
           else
             echo "No formatting changes needed."
           fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 'No files to format'
         if: steps.files.outputs.files_to_format == ''
