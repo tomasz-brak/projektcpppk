@@ -70,6 +70,6 @@ RUN_TEST(classStorage) {
 }
 
 RUN_TEST(storeClassList_removeWhitespace$escaped) {
-    const std::string testString = R"(abc"\" cd" ef")"; // String wit space with an escaped quote
-    T_ASSERT(removeWhitespacePreserveStrings(testString).compare(R"(abc"\" cd"ef)") == true);
+    const std::string testString = "abc\"\\\" cd\" ef"; // String wit space with an escaped quote
+    T_ASSERT(removeWhitespacePreserveStrings(testString).compare("abc\"\\\" cd\"ef") == 0);
 }
