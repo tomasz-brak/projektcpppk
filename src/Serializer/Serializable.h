@@ -19,6 +19,18 @@ concept HasStaticName = requires {
   { U::static_name() } -> std::convertible_to<const std::string &>;
 };
 
+template<typename Derived>
+struct InharitanceDescriptor {
+    InharitanceDescriptor() {
+        static bool factoryRegistered = false;
+        if (!factoryRegistered) {
+            // Derived::static_name() must exist.
+            registerFactory(Derived::static_name(), [](){ return std::make_shared<Derived>(); });
+            factoryRegistered = true;
+        }
+    }
+};
+
 template <typename Derived> class Serializable : public ISerializable
 {
 public:
@@ -44,9 +56,9 @@ public:
     return std::make_shared<Derived>(std::forward<Args>(args)...);
   }
 
-  template <typename MemberType, typename TConverter>
+  template <typename MemberType, typename ClassType, typename TConverter>
   void registerField(const std::string &field_name,
-                     MemberType Derived::*member_ptr, TConverter converter)
+                     MemberType ClassType::*member_ptr, TConverter converter)
   {
     std::cout << "Registering field: " << field_name << " for " << this->name
               << std::endl;
@@ -56,14 +68,14 @@ public:
 
     entry.to_str
       = [this, conv_ptr, member_ptr]() -> std::optional<std::string> {
-      auto *self = static_cast<Derived *>(this);
+      auto *self = static_cast<ClassType *>(this);
       return conv_ptr->to_string(self->*member_ptr);
     };
 
     Loader fieldLoader
       = [conv_ptr, member_ptr](std::shared_ptr<ISerializable> obj,
                                const std::string &s) -> bool {
-      auto derived_obj = std::dynamic_pointer_cast<Derived>(obj);
+      auto derived_obj = std::dynamic_pointer_cast<ClassType>(obj);
       if(!derived_obj)
         {
           return false; // wrong cast

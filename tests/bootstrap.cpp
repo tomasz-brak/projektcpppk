@@ -2,8 +2,6 @@
 // Created by tomasz on 11/14/2025.
 //
 
-#include <windows.h>
-
 #include "../src/util.h"
 #include "./test_util.h"
 
@@ -17,8 +15,6 @@ RUN_TEST(util_splitString)
 
 int main()
 {
-  SetConsoleOutputCP(65001);
-
   for(const auto &test : get_test_registry())
     {
       test.func();
