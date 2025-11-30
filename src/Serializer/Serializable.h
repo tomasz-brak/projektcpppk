@@ -19,16 +19,19 @@ concept HasStaticName = requires {
   { U::static_name() } -> std::convertible_to<const std::string &>;
 };
 
-template<typename Derived>
-struct InharitanceDescriptor {
-    InharitanceDescriptor() {
-        static bool factoryRegistered = false;
-        if (!factoryRegistered) {
-            // Derived::static_name() must exist.
-            registerFactory(Derived::static_name(), [](){ return std::make_shared<Derived>(); });
-            factoryRegistered = true;
-        }
-    }
+template <typename Derived> struct InharitanceDescriptor
+{
+  InharitanceDescriptor()
+  {
+    static bool factoryRegistered = false;
+    if(!factoryRegistered)
+      {
+        // Derived::static_name() must exist.
+        registerFactory(Derived::static_name(),
+                        []() { return std::make_shared<Derived>(); });
+        factoryRegistered = true;
+      }
+  }
 };
 
 template <typename Derived> class Serializable : public ISerializable
@@ -56,12 +59,14 @@ public:
     return std::make_shared<Derived>(std::forward<Args>(args)...);
   }
 
+  static std::string static_name() { return "Default"; }
+
   template <typename MemberType, typename ClassType, typename TConverter>
   void registerField(const std::string &field_name,
                      MemberType ClassType::*member_ptr, TConverter converter)
   {
-    std::cout << "Registering field: " << field_name << " for " << this->name
-              << std::endl;
+    std::cout << "Registering field: " << field_name << " for "
+              << ClassType::static_name() << std::endl;
 
     auto conv_ptr = std::make_shared<TConverter>(std::move(converter));
     ConverterEntry entry;
@@ -92,7 +97,7 @@ public:
       return true;
     };
 
-    registerLoader(this->name, fieldLoader, field_name);
+    registerLoader(ClassType::static_name(), fieldLoader, field_name);
     converters[field_name] = std::move(entry);
   }
 };

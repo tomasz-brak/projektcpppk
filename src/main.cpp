@@ -27,8 +27,6 @@ public:
   }
 
   explicit Foo(){
-    this->name = static_name();
-
     registerField("A", &Foo::a, defaultString<int>());
     registerField("B", &Foo::b, defaultString<std::string>());
   }
@@ -44,8 +42,6 @@ class Bar : public Foo {
     return name;
   }
   explicit Bar(){
-    this->name = static_name();
-
     registerField("C", &Bar::c, defaultString<int>());
   }
 };

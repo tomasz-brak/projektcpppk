@@ -52,8 +52,6 @@ RUN_TEST(classStorage)
 
     explicit TestClass()
     {
-      this->name = static_name();
-
       registerField("something", &TestClass::something, defaultString<int>());
       registerField("text", &TestClass::text, defaultString<std::string>());
     }
