@@ -43,3 +43,7 @@ build
 *.dwo
 
 .idea/*
+
+.cache/*
+compile_commands.json
+out/*
