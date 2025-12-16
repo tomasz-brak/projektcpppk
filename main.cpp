@@ -98,6 +98,20 @@ void odczytajUrzytkownika(list<Urzytkownik>& urzytkownicy) {
     plik.close();
 }
 
+void pobierzDane(string tekst, string& dane) {
+  do
+    {
+      cout << "│ " + tekst + ": ";
+      getline(cin, dane);
+      if(dane.find(';') != string::npos)
+        {
+          cout << "│ Tekst nie może zawierać średnika (;)!\n";
+          cout << "│ " + tekst + ": ";
+          getline(cin, dane);
+        }
+  } while(dane.find(';') != string::npos);
+}
+
 int main()
 {
     #ifdef _WIN32
@@ -145,6 +159,13 @@ int main()
     {
         while(k == 0)
         {
+            string tytul, autor,cena;
+            system("cls");
+            cout << "┌────────── DODAJ KSIĄŻKĘ ───────────┐" << endl;
+            cin.ignore();
+            pobierzDane("Tytul", tytul);
+            pobierzDane("Autor", autor);
+            pobierzDane("Cena", cena);
             #ifdef WINDOWS
                 std::system("cls");
             #else
