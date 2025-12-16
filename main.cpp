@@ -96,6 +96,20 @@ void odczytajUrzytkownika(list<Urzytkownik>& urzytkownicy) {
     plik.close();
 }
 
+void pobierzDane(string tekst, string& dane) {
+  do
+    {
+      cout << "│ " + tekst + ": ";
+      getline(cin, dane);
+      if(dane.find(';') != string::npos)
+        {
+          cout << "│ Tekst nie może zawierać średnika (;)!\n";
+          cout << "│ " + tekst + ": ";
+          getline(cin, dane);
+        }
+  } while(dane.find(';') != string::npos);
+}
+
 int main()
 {
     #ifdef _WIN32
@@ -147,12 +161,9 @@ int main()
             system("cls");
             cout << "┌────────── DODAJ KSIĄŻKĘ ───────────┐" << endl;
             cin.ignore();
-            cout << "│ Tytul: ";
-            getline(cin, tytul);
-            cout << "│ Autor: ";
-            getline(cin, autor);
-            cout << "│ Cena: ";
-            getline(cin,cena);
+            pobierzDane("Tytul", tytul);
+            pobierzDane("Autor", autor);
+            pobierzDane("Cena", cena);
             cout << "├────────────────────────────────────┤" << endl;
 
             string nowy_id = tytul.substr(0, 3) + autor.substr(0, 3) + to_string(rand() % 1000);
