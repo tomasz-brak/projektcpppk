@@ -15,8 +15,8 @@ string Ksiazka::daneDoZapisu()
   return dane.str();
 }
 
-void Ksiazka::usunKsiazke(std::list<Ksiazka> &ksiazki, string id){
-  ksiazki.remove_if([id](Ksiazka current_book){
-    return current_book.id == id;
-  });
+void Ksiazka::usunKsiazke(std::list<Ksiazka> &ksiazki, string id)
+{
+  ksiazki.remove_if(
+    [id](Ksiazka current_book) { return current_book.id == id; });
 }

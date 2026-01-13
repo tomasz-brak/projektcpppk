@@ -64,8 +64,6 @@ void odczytajKsiazki(list<Ksiazka> &ksiazki)
   plik.close();
 }
 
-
-
 int main()
 {
 #ifdef _WIN32
@@ -190,7 +188,8 @@ int main()
                 }
               else
                 {
-                  cout << "│ Nie znaleziono książki o ID: " << user_input << endl;
+                  cout << "│ Nie znaleziono książki o ID: " << user_input
+                       << endl;
                 }
               cout << "└────────────────────────────────────┘" << endl;
               cout << "<--- : ";
@@ -272,7 +271,8 @@ int main()
 
               if(listaUzytkownikow.size() < poczatkowy_rozmiar)
                 {
-                  cout << "│ Usunieto uzytkownika o ID: " << user_input << endl;
+                  cout << "│ Usunieto uzytkownika o ID: " << user_input
+                       << endl;
                   Uzytkownik::zapiszUzytkownika(listaUzytkownikow);
                 }
               else
@@ -386,7 +386,6 @@ int main()
               size_t poczatkowy_rozmiar = listaKsiazek.size();
               Ksiazka::usunKsiazke(listaKsiazek, user_input);
 
-
               if(listaKsiazek.size() < poczatkowy_rozmiar)
                 {
                   cout << "│ Usunieto książkę o ID: " << user_input << endl;
@@ -394,7 +393,8 @@ int main()
                 }
               else
                 {
-                  cout << "│ Nie znaleziono książki o ID: " << user_input << endl;
+                  cout << "│ Nie znaleziono książki o ID: " << user_input
+                       << endl;
                 }
               cout << "└────────────────────────────────────┘" << endl;
               cout << "<--- : ";
@@ -476,7 +476,8 @@ int main()
 
               if(listaUzytkownikow.size() < poczatkowy_rozmiar)
                 {
-                  cout << "│ Usunieto uzytkownika o ID: " << user_input << endl;
+                  cout << "│ Usunieto uzytkownika o ID: " << user_input
+                       << endl;
                   Uzytkownik::zapiszUzytkownika(listaUzytkownikow);
                 }
               else

@@ -30,11 +30,9 @@ public:
     float cena;
     std::string id2;
     std::string id;
-
-      };
+  };
 
   static void usunKsiazke(std::list<Ksiazka> &ksiazki, std::string ksiazka);
-  
 
 #endif
 };
