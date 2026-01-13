@@ -1,20 +1,19 @@
 #ifndef Ksiazka_H
 #define Ksiazka_H
-
-using namespace std;
+#include <string>
+#include <list>
 
 class Ksiazka {
 public:
-    Ksiazka(string tyt, string aut, float cena, string i, string id2);
-    void usunKsiazke(list<Ksiazka>& ksiazki, const string& id);
-    string daneDoZapisu();
+    Ksiazka(std::string tyt, std::string aut, float cena, std::string i, std::string id2);
+    void usunKsiazke(std::list<Ksiazka>& ksiazki, const std::string& id);
+    std::string daneDoZapisu();
 
-private:
-    string tytul;
-    string autor;
+    std::string tytul;
+    std::string autor;
     float cena;
-    string id2;
-    string id;
+    std::string id2;
+    std::string id;
 };
 
 #endif

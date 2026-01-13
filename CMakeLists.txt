@@ -3,8 +3,17 @@ project(projekt)
 
 set(CMAKE_CXX_STANDARD 26)
 
-add_executable(projekt
-        main.cpp
+
+add_executable(MyProgram)
+
+
+target_sources(MyProgram
+  PRIVATE
+    main.cpp
+    Uzytkownik.h
+    Uzytkownik.cpp
+    Ksiazka.cpp
+    Ksiazka.h
 )
 
 
