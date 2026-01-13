@@ -64,16 +64,6 @@ void odczytajKsiazki(list<Ksiazka> &ksiazki)
   plik.close();
 }
 
-void zapiszKsiazki(list<Ksiazka> &ksiazki)
-{
-  ofstream plik("ksiazki.txt");
-  for(auto &k : ksiazki)
-    {
-      plik << k.daneDoZapisu() << endl;
-    }
-  plik.close();
-}
-
 int main()
 {
 #ifdef _WIN32
@@ -92,7 +82,7 @@ int main()
 
   int k = 0;
   string opcja;
-  string temp;
+  string user_input;
   string login, haslo;
   bool istnieje = false;
 
@@ -105,7 +95,7 @@ int main()
   getline(cin, haslo);
   cout << "└────────────────────────────────────┘" << endl;
   cout << "---> : ";
-  getline(cin, temp);
+  getline(cin, user_input);
 
   for(const auto &u : listaUzytkownikow)
     {
@@ -164,15 +154,16 @@ int main()
                                + to_string(rand() % 1000);
               listaKsiazek.push_back(
                 Ksiazka(tytul, autor, stof(cena), nowy_id, "ksiazka"));
-              zapiszKsiazki(listaKsiazek);
+              Ksiazka::zapiszKsiazki(listaKsiazek);
 
               cout << "│ Dodano książkę: " << tytul << endl;
               cout << "└────────────────────────────────────┘" << endl;
               cout << "<--- : ";
-              getline(cin, temp);
+              getline(cin, user_input);
             }
           else if(opcja[0] == 'a')
             {
+              wyczyscKonsole();
               wyczyscKonsole();
 
               cout << "┌─────────── USUŃ KSIĄŻKĘ ───────────┐" << endl;
@@ -184,25 +175,26 @@ int main()
                 }
               cout << "├────────────────────────────────────┤" << endl;
               cout << "│ Podaj ID książki do usunięcia: ";
-              cin >> temp;
+              cin >> user_input;
               cout << "├────────────────────────────────────┤" << endl;
 
               size_t poczatkowy_rozmiar = listaKsiazek.size();
-              usunKsiazke(listaKsiazek, temp);
+              Ksiazka::usunKsiazke(listaKsiazek, user_input);
 
               if(listaKsiazek.size() < poczatkowy_rozmiar)
                 {
-                  cout << "│ Usunieto książkę o ID: " << temp << endl;
-                  zapiszKsiazke(listaKsiazek);
+                  cout << "│ Usunieto książkę o ID: " << user_input << endl;
+                  Ksiazka::zapiszKsiazki(listaKsiazek);
                 }
               else
                 {
-                  cout << "│ Nie znaleziono książki o ID: " << temp << endl;
+                  cout << "│ Nie znaleziono książki o ID: " << user_input
+                       << endl;
                 }
               cout << "└────────────────────────────────────┘" << endl;
               cout << "<--- : ";
               cin.ignore();
-              getline(cin, temp);
+              getline(cin, user_input);
             }
           else if(opcja[0] == 's')
             {
@@ -227,7 +219,7 @@ int main()
               cout << "└────────────────────────────────────┘" << endl;
               cout << "<--- : ";
               cin.ignore();
-              getline(cin, temp);
+              getline(cin, user_input);
             }
           else if(opcja[0] == 'd')
             {
@@ -256,7 +248,7 @@ int main()
               cout << "│ Dodano: " << imie << " " << nazwisko << endl;
               cout << "└────────────────────────────────────┘" << endl;
               cout << "<--- : ";
-              getline(cin, temp);
+              getline(cin, user_input);
             }
           else if(opcja[0] == 'q')
             {
@@ -270,27 +262,28 @@ int main()
                 }
               cout << "├────────────────────────────────────┤" << endl;
               cout << "│ Podaj ID urzytkownika do usunięcia: ";
-              cin >> temp;
+              cin >> user_input;
               cout << "├────────────────────────────────────┤" << endl;
 
               size_t poczatkowy_rozmiar = listaUzytkownikow.size();
 
-              Uzytkownik::usunUzytkownika(listaUzytkownikow, temp);
+              Uzytkownik::usunUzytkownika(listaUzytkownikow, user_input);
 
               if(listaUzytkownikow.size() < poczatkowy_rozmiar)
                 {
-                  cout << "│ Usunieto uzytkownika o ID: " << temp << endl;
-          Uzytkownik::zapiszUzytkownika(listaUzytkownikow);
+                  cout << "│ Usunieto uzytkownika o ID: " << user_input
+                       << endl;
+                  Uzytkownik::zapiszUzytkownika(listaUzytkownikow);
                 }
               else
                 {
-                  cout << "│ Nie znaleziono uzytkownika o ID: " << temp
+                  cout << "│ Nie znaleziono uzytkownika o ID: " << user_input
                        << endl;
                 }
               cout << "└────────────────────────────────────┘" << endl;
               cout << "<--- : ";
               cin.ignore();
-              getline(cin, temp);
+              getline(cin, user_input);
             }
           else if(opcja[0] == 'e')
             {
@@ -316,7 +309,7 @@ int main()
               cout << "└────────────────────────────────────┘" << endl;
               cout << "<--- : ";
               cin.ignore();
-              getline(cin, temp);
+              getline(cin, user_input);
             }
           else if(opcja[0] == 'z')
             {
@@ -367,12 +360,12 @@ int main()
                                + to_string(rand() % 1000);
               listaKsiazek.push_back(
                 Ksiazka(tytul, autor, stof(cena), nowy_id, "ksiazka"));
-              zapiszKsiazke(listaKsiazek);
+              Ksiazka::zapiszKsiazki(listaKsiazek);
 
               cout << "│ Dodano książkę: " << tytul << endl;
               cout << "└────────────────────────────────────┘" << endl;
               cout << "<--- : ";
-              getline(cin, temp);
+              getline(cin, user_input);
             }
           else if(opcja[0] == 'a')
             {
@@ -387,25 +380,26 @@ int main()
                 }
               cout << "├────────────────────────────────────┤" << endl;
               cout << "│ Podaj ID książki do usunięcia: ";
-              cin >> temp;
+              cin >> user_input;
               cout << "├────────────────────────────────────┤" << endl;
 
               size_t poczatkowy_rozmiar = listaKsiazek.size();
-              usunKsiazke(listaKsiazek, temp);
+              Ksiazka::usunKsiazke(listaKsiazek, user_input);
 
               if(listaKsiazek.size() < poczatkowy_rozmiar)
                 {
-                  cout << "│ Usunieto książkę o ID: " << temp << endl;
-                  zapiszKsiazke(listaKsiazek);
+                  cout << "│ Usunieto książkę o ID: " << user_input << endl;
+                  Ksiazka::zapiszKsiazki(listaKsiazek);
                 }
               else
                 {
-                  cout << "│ Nie znaleziono książki o ID: " << temp << endl;
+                  cout << "│ Nie znaleziono książki o ID: " << user_input
+                       << endl;
                 }
               cout << "└────────────────────────────────────┘" << endl;
               cout << "<--- : ";
               cin.ignore();
-              getline(cin, temp);
+              getline(cin, user_input);
             }
           else if(opcja[0] == 's')
             {
@@ -433,7 +427,7 @@ int main()
               cout << "└────────────────────────────────────┘" << endl;
               cout << "<--- : ";
               cin.ignore();
-              getline(cin, temp);
+              getline(cin, user_input);
             }
           else if(opcja[0] == 'd')
             {
@@ -454,12 +448,12 @@ int main()
               listaUzytkownikow.push_back(
                 Uzytkownik(imie, nazwisko, nowy_id, haslo));
 
-        Uzytkownik::zapiszUzytkownika(listaUzytkownikow);
+              Uzytkownik::zapiszUzytkownika(listaUzytkownikow);
 
               cout << "│ Dodano: " << imie << " " << nazwisko << endl;
               cout << "└────────────────────────────────────┘" << endl;
               cout << "<--- : ";
-              getline(cin, temp);
+              getline(cin, user_input);
             }
           else if(opcja[0] == 'q')
             {
@@ -473,27 +467,28 @@ int main()
                 }
               cout << "├────────────────────────────────────┤" << endl;
               cout << "│ Podaj ID urzytkownika do usunięcia: ";
-              cin >> temp;
+              cin >> user_input;
               cout << "├────────────────────────────────────┤" << endl;
 
               size_t poczatkowy_rozmiar = listaUzytkownikow.size();
 
-              Uzytkownik::usunUzytkownika(listaUzytkownikow, temp);
+              Uzytkownik::usunUzytkownika(listaUzytkownikow, user_input);
 
               if(listaUzytkownikow.size() < poczatkowy_rozmiar)
                 {
-                  cout << "│ Usunieto uzytkownika o ID: " << temp << endl;
+                  cout << "│ Usunieto uzytkownika o ID: " << user_input
+                       << endl;
                   Uzytkownik::zapiszUzytkownika(listaUzytkownikow);
                 }
               else
                 {
-                  cout << "│ Nie znaleziono uzytkownika o ID: " << temp
+                  cout << "│ Nie znaleziono uzytkownika o ID: " << user_input
                        << endl;
                 }
               cout << "└────────────────────────────────────┘" << endl;
               cout << "<--- : ";
               cin.ignore();
-              getline(cin, temp);
+              getline(cin, user_input);
             }
           else if(opcja[0] == 'e')
             {
@@ -516,7 +511,7 @@ int main()
               cout << "└────────────────────────────────────┘" << endl;
               cout << "<--- : ";
               cin.ignore();
-              getline(cin, temp);
+              getline(cin, user_input);
             }
           else if(opcja[0] == 'z')
             {
