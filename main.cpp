@@ -6,289 +6,524 @@
 #include <sstream>
 #include <ctime>
 #include <clocale>
+#include "Ksiazka.h"
+#include "Uzytkownik.h"
 #ifdef _WIN32
 #include <windows.h>
 #endif
 
 using namespace std;
 
-class Ksiazka {
-public:
-    string tytul;
-    string autor;
-    float cena;
-    string id2;
-    string id;
-
-    Ksiazka(string tyt, string aut,float cena, string i,string id2) : tytul(tyt), autor(aut),cena(cena), id(i),id2(id2) {}
-};
-
-class Urzytkownik {
-public:
-    string imie;
-    string nazwisko;
-    string id;
-
-    Urzytkownik(string i, string n, string ID) : imie(i), nazwisko(n), id(ID) {}
-};
-
-void zapiszKsiazke(const list<Ksiazka>& ksiazki) {
-    ofstream plik("ksiazki.txt");
-    for (const auto& k : ksiazki) {
-        plik << k.id << ";" << k.tytul << ";" << k.autor<<";" <<k.cena<< ";" <<k.id2<<";"<< endl;
-    }
-    plik.close();
+void wyczyscKonsole()
+{
+#ifdef _WIN32
+  std::system("cls");
+#else
+  std::system("clear");
+#endif
 }
 
-void usunKsiazke(list<Ksiazka>& ksiazki, const string& id) {
-    ksiazki.remove_if([&id](const Ksiazka& k) { return k.id == id; });
-}
+void odczytajUzytkownikow(list<Uzytkownik> &uzytkownicy)
+{
+  ifstream plik("uzytkownicy.txt");
+  string linia;
+  uzytkownicy.clear();
 
-void odczytajKsiazke(list<Ksiazka>& ksiazki) {
-    ifstream plik("ksiazki.txt");
-    string linia;
-    ksiazki.clear();
-
-    while (getline(plik, linia)) {
-        stringstream ss(linia);
-        string id, tytul, autor,cena,id2;
-
-        if (getline(ss, id, ';') &&
-            getline(ss, tytul, ';') &&
-            getline(ss, autor, ';')&&
-            getline(ss, cena, ';')&&
-            getline(ss, id2, ';')) {
-
-            ksiazki.push_back(Ksiazka(tytul, autor,stof(cena), id,id2));
-        }
-    }
-    plik.close();
-}
-
-void zapiszUrzytkownika(const list<Urzytkownik>& urzytkownicy) {
-    ofstream plik("urzytkownicy.txt");
-    for (const auto& u : urzytkownicy) {
-        plik << u.id << ";" << u.imie << ";" << u.nazwisko << ";" << endl;
-    }
-    plik.close();
-}
-
-void usunUrzytkownika(list<Urzytkownik>& urzytkownicy, const string& id) {
-    urzytkownicy.remove_if([&id](const Urzytkownik& u) { return u.id == id; });
-}
-
-void odczytajUrzytkownika(list<Urzytkownik>& urzytkownicy) {
-    ifstream plik("urzytkownicy.txt");
-    string linia;
-    urzytkownicy.clear();
-
-    while (getline(plik, linia)) {
-        stringstream ss(linia);
-        string id, imie, nazwisko;
-
-        if (getline(ss, id, ';') &&
-            getline(ss, imie, ';') &&
-            getline(ss, nazwisko, ';')) {
-
-            urzytkownicy.push_back(Urzytkownik(imie, nazwisko, id));
-        }
-    }
-    plik.close();
-}
-
-void pobierzDane(string tekst, string& dane) {
-  do
+  while(getline(plik, linia))
     {
-      cout << "│ " + tekst + ": ";
-      getline(cin, dane);
-      if(dane.find(';') != string::npos)
+      stringstream ss(linia);
+      string id, imie, nazwisko, haslo;
+
+      if(getline(ss, id, ';') && getline(ss, imie, ';')
+         && getline(ss, nazwisko, ';') && getline(ss, haslo, ';'))
         {
-          cout << "│ Tekst nie może zawierać średnika (;)!\n";
-          cout << "│ " + tekst + ": ";
-          getline(cin, dane);
+          uzytkownicy.push_back(Uzytkownik(imie, nazwisko, id, haslo));
         }
-  } while(dane.find(';') != string::npos);
+    }
+  plik.close();
+}
+
+void odczytajKsiazki(list<Ksiazka> &ksiazki)
+{
+  ifstream plik("ksiazki.txt");
+  string linia;
+  ksiazki.clear();
+
+  while(getline(plik, linia))
+    {
+      stringstream ss(linia);
+      string id, tytul, autor, cena, id2;
+
+      if(getline(ss, id, ';') && getline(ss, tytul, ';')
+         && getline(ss, autor, ';') && getline(ss, cena, ';')
+         && getline(ss, id2, ';'))
+        {
+          ksiazki.push_back(Ksiazka(tytul, autor, stof(cena), id, id2));
+        }
+    }
+  plik.close();
+}
+
+void zapiszKsiazki(list<Ksiazka> &ksiazki)
+{
+  ofstream plik("ksiazki.txt");
+  for(auto &k : ksiazki)
+    {
+      plik << k.daneDoZapisu() << endl;
+    }
+  plik.close();
 }
 
 int main()
 {
-    #ifdef _WIN32
-        SetConsoleOutputCP(65001);
-        SetConsoleCP(65001);
-    #endif
-        setlocale(LC_ALL, "pl_PL.UTF-8");
+#ifdef _WIN32
+  SetConsoleOutputCP(65001);
+  SetConsoleCP(65001);
+#endif
+  setlocale(LC_ALL, "pl_PL.UTF-8");
 
-    srand(time(0));
+  srand(time(0));
 
-    list<Ksiazka> listaKsiazek;
-    list<Urzytkownik> listaUrzytkownikow;
+  list<Ksiazka> listaKsiazek;
+  list<Uzytkownik> listaUzytkownikow;
 
-    odczytajKsiazke(listaKsiazek);
-    odczytajUrzytkownika(listaUrzytkownikow);
+  odczytajKsiazki(listaKsiazek);
+  odczytajUzytkownikow(listaUzytkownikow);
 
-    int k = 0;
-    string opcja;
-    string temp;
+  int k = 0;
+  string opcja;
+  string temp;
+  string login, haslo;
+  bool istnieje = false;
 
-    while(k == 0)
+  wyczyscKonsole();
+
+  cout << "┌──────────── KSIĘGARNIA ────────────┐" << endl;
+  cout << "│ Login: ";
+  getline(cin, login);
+  cout << "│ Hasło: ";
+  getline(cin, haslo);
+  cout << "└────────────────────────────────────┘" << endl;
+  cout << "---> : ";
+  getline(cin, temp);
+
+  for(const auto &u : listaUzytkownikow)
     {
-        system("cls");
-        cout << "┌──────────── KSIĘGARNIA ────────────┐" << endl;
-        cout << "│ Wybierz opcje:                     │" << endl;
-        cout << "│ - dodaj książkę (w)                │" << endl;
-        cout << "│ - usuń książkę (a)                 │" << endl;
-        cout << "│ - wyswietl liste książek (s)       │" << endl;
-        cout << "├────────────────────────────────────┤" << endl;
-        cout << "│ - dodaj urzytkownika (d)           │" << endl;
-        cout << "│ - usuń urzytkownika (q)            │" << endl;
-        cout << "│ - wyswietl liste urzytkowników (e) │" << endl;
-        cout << "├────────────────────────────────────┤" << endl;
-        cout << "│ - sprzedarz książek (r)            │" << endl;
-        cout << "│ - skup książek (f)                 │" << endl;
-        cout << "├────────────────────────────────────┤" << endl;
-        cout << "│ - zamknij (z)                      │" << endl;
-        cout << "└────────────────────────────────────┘" << endl;
-        cout << "---> : ";
-        cin>>opcja;
-
-        if (opcja.length()!=1) {
-            opcja = 'x';
-        }
-
-        if (opcja[0] == 'w')
+      if(u.czyPoprawneDaneLogowania(login, haslo))
         {
-            string tytul, autor,cena;
-            system("cls");
-            cout << "┌────────── DODAJ KSIĄŻKĘ ───────────┐" << endl;
-            cin.ignore();
-            pobierzDane("Tytul", tytul);
-            pobierzDane("Autor", autor);
-            pobierzDane("Cena", cena);
-            cout << "├────────────────────────────────────┤" << endl;
-
-            string nowy_id = tytul.substr(0, 3) + autor.substr(0, 3) + to_string(rand() % 1000);
-            listaKsiazek.push_back(Ksiazka(tytul, autor,stof(cena), nowy_id,"ksiazka"));
-            zapiszKsiazke(listaKsiazek);
-
-            cout << "│ Dodano książkę: " << tytul <<endl;
-            cout << "└────────────────────────────────────┘" << endl;
-            cout << "<--- : ";
-            getline(cin, temp);
-        }
-        else if (opcja[0] == 'a')
-        {
-            system("cls");
-            cout << "┌─────────── USUŃ KSIĄŻKĘ ───────────┐" << endl;
-            for (const auto& k : listaKsiazek) {
-                cout << "│ [" << k.id << "] Tytul: " << k.tytul << ", Autor: " << k.autor <<", Cena: "<<k.cena<<" zł"<< endl;
-            }
-            cout << "├────────────────────────────────────┤" << endl;
-            cout << "│ Podaj ID książki do usunięcia: ";
-            cin >> temp;
-            cout << "├────────────────────────────────────┤" << endl;
-
-            size_t poczatkowy_rozmiar = listaKsiazek.size();
-            usunKsiazke(listaKsiazek, temp);
-
-            if (listaKsiazek.size() < poczatkowy_rozmiar) {
-                cout << "│ Usunieto książkę o ID: " << temp << endl;
-                zapiszKsiazke(listaKsiazek);
-            } else {
-                cout << "│ Nie znaleziono książki o ID: " << temp << endl;
-            }
-            cout << "└────────────────────────────────────┘" << endl;
-             cout << "<--- : ";
-             cin.ignore(); getline(cin, temp);
-        }
-        else if (opcja[0] == 's')
-        {
-            system("cls");
-            cout << "┌──────── LISTA KSIĄŻEK (" << listaKsiazek.size() << (listaKsiazek.size()>9?"─":"") << ") ─────────┐" << endl;
-            if (listaKsiazek.size()!=0){
-                    for (const auto& k : listaKsiazek) {
-                        cout << "│ - Tytul: " << k.tytul << ", Autor: " << k.autor <<", Cena: "<<k.cena<<" zł"<< endl;
-                }
-            }
-            else{
-                cout << "│ Brak książek !!!" << endl;
-            }
-            cout << "└────────────────────────────────────┘" << endl;
-            cout << "<--- : ";
-            cin.ignore();
-            getline(cin, temp);
-        }
-        else if (opcja[0] == 'd')
-        {
-            string imie, nazwisko;
-            system("cls");
-            cout << "┌──────── DODAJ UŻYTKOWNIKA ─────────┐" << endl;
-
-            cin.ignore();
-            cout << "│ Imie: ";
-            getline(cin, imie);
-            cout << "│ Nazwisko: ";
-            getline(cin, nazwisko);
-            cout << "├────────────────────────────────────┤" << endl;
-
-            string nowy_id = imie.substr(0, 3) + nazwisko.substr(0, 3) + to_string(rand() % 1000);
-            listaUrzytkownikow.push_back(Urzytkownik(imie, nazwisko, nowy_id));
-
-            zapiszUrzytkownika(listaUrzytkownikow);
-
-            cout << "│ Dodano: " << imie << " " << nazwisko <<endl;
-            cout << "└────────────────────────────────────┘" << endl;
-            cout << "<--- : ";
-            getline(cin, temp);
-        }
-        else if (opcja[0] == 'q')
-        {
-            system("cls");
-            cout << "┌──────── USUŃ URZYTKOWNIKA ─────────┐" << endl;
-             for (const auto& u : listaUrzytkownikow) {
-                cout << "│ [" << u.id << "] Imie: " << u.imie << ", Nazwisko: " << u.nazwisko << endl;
-            }
-            cout << "├────────────────────────────────────┤" << endl;
-            cout << "│ Podaj ID urzytkownika do usunięcia: ";
-            cin >> temp;
-            cout << "├────────────────────────────────────┤" << endl;
-
-            size_t poczatkowy_rozmiar = listaUrzytkownikow.size();
-
-            usunUrzytkownika(listaUrzytkownikow, temp);
-
-            if (listaUrzytkownikow.size() < poczatkowy_rozmiar) {
-                cout << "│ Usunieto uzytkownika o ID: " << temp << endl;
-                zapiszUrzytkownika(listaUrzytkownikow);
-            } else {
-                cout << "│ Nie znaleziono uzytkownika o ID: " << temp << endl;
-            }
-                cout << "└────────────────────────────────────┘" << endl;
-             cout << "<--- : ";
-             cin.ignore(); getline(cin, temp);
-        }
-        else if (opcja[0] == 'e')
-        {
-            system("cls");
-            cout << "┌──────── LISTA KSIĄŻEK (" << listaKsiazek.size() << (listaKsiazek.size()>9?"─":"") << ") ─────────┐" << endl;
-            cout << "┌────── LISTA UŻYTKOWNIKÓW (" << listaUrzytkownikow.size() << ") ─────────┐" << endl;
-            if (listaUrzytkownikow.size()!=0){
-                    for (const auto& u : listaUrzytkownikow) {
-                        cout << "│ [" << u.id << "] Imie: " << u.imie << ", Nazwisko: " << u.nazwisko << endl;
-                    }
-            }
-            else{
-                cout << "│ Brak urzytkowników !!!" << endl;
-            }
-            cout << "└────────────────────────────────────┘" << endl;
-            cout << "<--- : ";
-            cin.ignore();
-            getline(cin, temp);
-        }
-        else if (opcja[0] == 'z')
-        {
-            k = 1;
+          istnieje = true;
         }
     }
 
-    return 0;
+  if(login == "admin" and haslo == "admin")
+    {
+      while(k == 0)
+        {
+          wyczyscKonsole();
+
+          cout << "┌──────────── KSIĘGARNIA ────────────┐" << endl;
+          cout << "│ Wybierz opcje:                     │" << endl;
+          cout << "│ - dodaj książkę (w)                │" << endl;
+          cout << "│ - usuń książkę (a)                 │" << endl;
+          cout << "│ - wyswietl liste książek (s)       │" << endl;
+          cout << "├────────────────────────────────────┤" << endl;
+          cout << "│ - dodaj urzytkownika (d)           │" << endl;
+          cout << "│ - usuń urzytkownika (q)            │" << endl;
+          cout << "│ - wyswietl liste urzytkowników (e) │" << endl;
+          cout << "├────────────────────────────────────┤" << endl;
+          cout << "│ - sprzedarz książek (r)            │" << endl;
+          cout << "│ - skup książek (f)                 │" << endl;
+          cout << "├────────────────────────────────────┤" << endl;
+          cout << "│ - wyloguj (z)                      │" << endl;
+          cout << "└────────────────────────────────────┘" << endl;
+          cout << "---> : ";
+          getline(cin, opcja);
+
+          if(opcja.length() != 1)
+            {
+              opcja = 'x';
+            }
+
+          if(opcja[0] == 'w')
+            {
+              string tytul, autor, cena;
+
+              wyczyscKonsole();
+
+              cout << "┌────────── DODAJ KSIĄŻKĘ ───────────┐" << endl;
+              cin.ignore();
+              cout << "│ Tytul: ";
+              getline(cin, tytul);
+              cout << "│ Autor: ";
+              getline(cin, autor);
+              cout << "│ Cena: ";
+              getline(cin, cena);
+              cout << "├────────────────────────────────────┤" << endl;
+
+              string nowy_id = tytul.substr(0, 3) + autor.substr(0, 3)
+                               + to_string(rand() % 1000);
+              listaKsiazek.push_back(
+                Ksiazka(tytul, autor, stof(cena), nowy_id, "ksiazka"));
+              zapiszKsiazki(listaKsiazek);
+
+              cout << "│ Dodano książkę: " << tytul << endl;
+              cout << "└────────────────────────────────────┘" << endl;
+              cout << "<--- : ";
+              getline(cin, temp);
+            }
+          else if(opcja[0] == 'a')
+            {
+              wyczyscKonsole();
+
+              cout << "┌─────────── USUŃ KSIĄŻKĘ ───────────┐" << endl;
+              for(const auto &k : listaKsiazek)
+                {
+                  cout << "│ [" << k.id << "] Tytul: " << k.tytul
+                       << ", Autor: " << k.autor << ", Cena: " << k.cena
+                       << " zł" << endl;
+                }
+              cout << "├────────────────────────────────────┤" << endl;
+              cout << "│ Podaj ID książki do usunięcia: ";
+              cin >> temp;
+              cout << "├────────────────────────────────────┤" << endl;
+
+              size_t poczatkowy_rozmiar = listaKsiazek.size();
+              usunKsiazke(listaKsiazek, temp);
+
+              if(listaKsiazek.size() < poczatkowy_rozmiar)
+                {
+                  cout << "│ Usunieto książkę o ID: " << temp << endl;
+                  zapiszKsiazke(listaKsiazek);
+                }
+              else
+                {
+                  cout << "│ Nie znaleziono książki o ID: " << temp << endl;
+                }
+              cout << "└────────────────────────────────────┘" << endl;
+              cout << "<--- : ";
+              cin.ignore();
+              getline(cin, temp);
+            }
+          else if(opcja[0] == 's')
+            {
+              wyczyscKonsole();
+
+              cout << "┌──────── LISTA KSIĄŻEK (" << listaKsiazek.size()
+                   << (listaKsiazek.size() > 9 ? "─" : "") << ") ─────────┐"
+                   << endl;
+              if(listaKsiazek.size() != 0)
+                {
+                  for(const auto &k : listaKsiazek)
+                    {
+                      cout << "│ - Tytul: " << k.tytul
+                           << ", Autor: " << k.autor << ", Cena: " << k.cena
+                           << " zł" << endl;
+                    }
+                }
+              else
+                {
+                  cout << "│ Brak książek !!!" << endl;
+                }
+              cout << "└────────────────────────────────────┘" << endl;
+              cout << "<--- : ";
+              cin.ignore();
+              getline(cin, temp);
+            }
+          else if(opcja[0] == 'd')
+            {
+              string imie, nazwisko;
+
+              wyczyscKonsole();
+
+              cout << "┌──────── DODAJ UŻYTKOWNIKA ─────────┐" << endl;
+
+              cin.ignore();
+              cout << "│ Imie: ";
+              getline(cin, imie);
+              cout << "│ Nazwisko: ";
+              getline(cin, nazwisko);
+              cout << "│ Hasło: ";
+              getline(cin, haslo);
+              cout << "├────────────────────────────────────┤" << endl;
+
+              string nowy_id = imie.substr(0, 3) + nazwisko.substr(0, 3)
+                               + to_string(rand() % 1000);
+              listaUzytkownikow.push_back(
+                Urzytkownik(imie, nazwisko, nowy_id, haslo));
+
+              zapiszUrzytkownika(listaUzytkownikow);
+
+              cout << "│ Dodano: " << imie << " " << nazwisko << endl;
+              cout << "└────────────────────────────────────┘" << endl;
+              cout << "<--- : ";
+              getline(cin, temp);
+            }
+          else if(opcja[0] == 'q')
+            {
+              wyczyscKonsole();
+
+              cout << "┌──────── USUŃ URZYTKOWNIKA ─────────┐" << endl;
+              for(const auto &u : listaUzytkownikow)
+                {
+                  cout << "│ [" << u.id << "] Imie: " << u.imie
+                       << ", Nazwisko: " << u.nazwisko << endl;
+                }
+              cout << "├────────────────────────────────────┤" << endl;
+              cout << "│ Podaj ID urzytkownika do usunięcia: ";
+              cin >> temp;
+              cout << "├────────────────────────────────────┤" << endl;
+
+              size_t poczatkowy_rozmiar = listaUzytkownikow.size();
+
+              usunUrzytkownika(listaUzytkownikow, temp);
+
+              if(listaUzytkownikow.size() < poczatkowy_rozmiar)
+                {
+                  cout << "│ Usunieto uzytkownika o ID: " << temp << endl;
+                  zapiszUrzytkownika(listaUzytkownikow);
+                }
+              else
+                {
+                  cout << "│ Nie znaleziono uzytkownika o ID: " << temp
+                       << endl;
+                }
+              cout << "└────────────────────────────────────┘" << endl;
+              cout << "<--- : ";
+              cin.ignore();
+              getline(cin, temp);
+            }
+          else if(opcja[0] == 'e')
+            {
+              wyczyscKonsole();
+
+              cout << "┌──────── LISTA KSIĄŻEK (" << listaKsiazek.size()
+                   << (listaKsiazek.size() > 9 ? "─" : "") << ") ─────────┐"
+                   << endl;
+              cout << "┌────── LISTA UŻYTKOWNIKÓW ("
+                   << listaUzytkownikow.size() << ") ─────────┐" << endl;
+              if(listaUzytkownikow.size() != 0)
+                {
+                  for(const auto &u : listaUzytkownikow)
+                    {
+                      cout << "│ [" << u.id << "] Imie: " << u.imie
+                           << ", Nazwisko: " << u.nazwisko << endl;
+                    }
+                }
+              else
+                {
+                  cout << "│ Brak urzytkowników !!!" << endl;
+                }
+              cout << "└────────────────────────────────────┘" << endl;
+              cout << "<--- : ";
+              cin.ignore();
+              getline(cin, temp);
+            }
+          else if(opcja[0] == 'z')
+            {
+              k = 1;
+            }
+        }
+    }
+  else if(istnieje == true)
+    {
+      while(k == 0)
+        {
+          wyczyscKonsole();
+
+          cout << "┌──────────── KSIĘGARNIA ────────────┐" << endl;
+          cout << "│ Wybierz opcje:                     │" << endl;
+          cout << "│ - kup książkę (r)                  │" << endl;
+          cout << "│ - usuń książkę (a)                 │" << endl;
+          cout << "│ - sprzedaj książkę (f)             │" << endl;
+          cout << "│ - wyswietl liste książek (s)       │" << endl;
+          cout << "├────────────────────────────────────┤" << endl;
+          cout << "│ - wyloguj (z)                      │" << endl;
+          cout << "└────────────────────────────────────┘" << endl;
+          cout << "---> : ";
+          cin >> opcja;
+
+          if(opcja.length() != 1)
+            {
+              opcja = 'x';
+            }
+
+          if(opcja[0] == 'w')
+            {
+              string tytul, autor, cena;
+
+              wyczyscKonsole();
+
+              cout << "┌────────── DODAJ KSIĄŻKĘ ───────────┐" << endl;
+              cin.ignore();
+              cout << "│ Tytul: ";
+              getline(cin, tytul);
+              cout << "│ Autor: ";
+              getline(cin, autor);
+              cout << "│ Cena: ";
+              getline(cin, cena);
+              cout << "├────────────────────────────────────┤" << endl;
+
+              string nowy_id = tytul.substr(0, 3) + autor.substr(0, 3)
+                               + to_string(rand() % 1000);
+              listaKsiazek.push_back(
+                Ksiazka(tytul, autor, stof(cena), nowy_id, "ksiazka"));
+              zapiszKsiazke(listaKsiazek);
+
+              cout << "│ Dodano książkę: " << tytul << endl;
+              cout << "└────────────────────────────────────┘" << endl;
+              cout << "<--- : ";
+              getline(cin, temp);
+            }
+          else if(opcja[0] == 'a')
+            {
+              wyczyscKonsole();
+
+              cout << "┌─────────── USUŃ KSIĄŻKĘ ───────────┐" << endl;
+              for(const auto &k : listaKsiazek)
+                {
+                  cout << "│ [" << k.id << "] Tytul: " << k.tytul
+                       << ", Autor: " << k.autor << ", Cena: " << k.cena
+                       << " zł" << endl;
+                }
+              cout << "├────────────────────────────────────┤" << endl;
+              cout << "│ Podaj ID książki do usunięcia: ";
+              cin >> temp;
+              cout << "├────────────────────────────────────┤" << endl;
+
+              size_t poczatkowy_rozmiar = listaKsiazek.size();
+              usunKsiazke(listaKsiazek, temp);
+
+              if(listaKsiazek.size() < poczatkowy_rozmiar)
+                {
+                  cout << "│ Usunieto książkę o ID: " << temp << endl;
+                  zapiszKsiazke(listaKsiazek);
+                }
+              else
+                {
+                  cout << "│ Nie znaleziono książki o ID: " << temp << endl;
+                }
+              cout << "└────────────────────────────────────┘" << endl;
+              cout << "<--- : ";
+              cin.ignore();
+              getline(cin, temp);
+            }
+          else if(opcja[0] == 's')
+            {
+              wyczyscKonsole();
+
+              cout << "┌──────── LISTA KSIĄŻEK (" << listaKsiazek.size()
+                   << (listaKsiazek.size() > 9 ? "─" : "") << ") ─────────┐"
+                   << endl;
+              if(listaKsiazek.size() != 0)
+                {
+                  for(const auto &k : listaKsiazek)
+                    {
+                      if(k.id2 == login)
+                        {
+                          cout << "│ - Tytul: " << k.tytul
+                               << ", Autor: " << k.autor
+                               << ", Cena: " << k.cena << " zł" << endl;
+                        }
+                    }
+                }
+              else
+                {
+                  cout << "│ Brak książek !!!" << endl;
+                }
+              cout << "└────────────────────────────────────┘" << endl;
+              cout << "<--- : ";
+              cin.ignore();
+              getline(cin, temp);
+            }
+          else if(opcja[0] == 'd')
+            {
+              string imie, nazwisko;
+
+              wyczyscKonsole();
+
+              cout << "┌──────── DODAJ UŻYTKOWNIKA ─────────┐" << endl;
+              cin.ignore();
+              cout << "│ Imie: ";
+              getline(cin, imie);
+              cout << "│ Nazwisko: ";
+              getline(cin, nazwisko);
+              cout << "├────────────────────────────────────┤" << endl;
+
+              string nowy_id = imie.substr(0, 3) + nazwisko.substr(0, 3)
+                               + to_string(rand() % 1000);
+              listaUzytkownikow.push_back(
+                Urzytkownik(imie, nazwisko, nowy_id, haslo));
+
+              zapiszUrzytkownika(listaUzytkownikow);
+
+              cout << "│ Dodano: " << imie << " " << nazwisko << endl;
+              cout << "└────────────────────────────────────┘" << endl;
+              cout << "<--- : ";
+              getline(cin, temp);
+            }
+          else if(opcja[0] == 'q')
+            {
+              wyczyscKonsole();
+
+              cout << "┌──────── USUŃ URZYTKOWNIKA ─────────┐" << endl;
+              for(const auto &u : listaUzytkownikow)
+                {
+                  cout << "│ [" << u.id << "] Imie: " << u.imie
+                       << ", Nazwisko: " << u.nazwisko << endl;
+                }
+              cout << "├────────────────────────────────────┤" << endl;
+              cout << "│ Podaj ID urzytkownika do usunięcia: ";
+              cin >> temp;
+              cout << "├────────────────────────────────────┤" << endl;
+
+              size_t poczatkowy_rozmiar = listaUzytkownikow.size();
+
+              usunUrzytkownika(listaUzytkownikow, temp);
+
+              if(listaUzytkownikow.size() < poczatkowy_rozmiar)
+                {
+                  cout << "│ Usunieto uzytkownika o ID: " << temp << endl;
+                  zapiszUrzytkownika(listaUzytkownikow);
+                }
+              else
+                {
+                  cout << "│ Nie znaleziono uzytkownika o ID: " << temp
+                       << endl;
+                }
+              cout << "└────────────────────────────────────┘" << endl;
+              cout << "<--- : ";
+              cin.ignore();
+              getline(cin, temp);
+            }
+          else if(opcja[0] == 'e')
+            {
+              wyczyscKonsole();
+
+              cout << "┌────── LISTA UŻYTKOWNIKÓW ("
+                   << listaUzytkownikow.size() << ") ─────────┐" << endl;
+              if(listaUzytkownikow.size() != 0)
+                {
+                  for(const auto &u : listaUzytkownikow)
+                    {
+                      cout << "│ [" << u.id << "] Imie: " << u.imie
+                           << ", Nazwisko: " << u.nazwisko << endl;
+                    }
+                }
+              else
+                {
+                  cout << "│ Brak urzytkowników !!!" << endl;
+                }
+              cout << "└────────────────────────────────────┘" << endl;
+              cout << "<--- : ";
+              cin.ignore();
+              getline(cin, temp);
+            }
+          else if(opcja[0] == 'z')
+            {
+              k = 1;
+            }
+        }
+    }
+
+  return 0;
 }
