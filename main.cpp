@@ -249,9 +249,9 @@ int main()
               string nowy_id = imie.substr(0, 3) + nazwisko.substr(0, 3)
                                + to_string(rand() % 1000);
               listaUzytkownikow.push_back(
-                Urzytkownik(imie, nazwisko, nowy_id, haslo));
+                Uzytkownik(imie, nazwisko, nowy_id, haslo));
 
-              zapiszUrzytkownika(listaUzytkownikow);
+              Uzytkownik::zapiszUzytkownika(listaUzytkownikow);
 
               cout << "│ Dodano: " << imie << " " << nazwisko << endl;
               cout << "└────────────────────────────────────┘" << endl;
@@ -275,12 +275,12 @@ int main()
 
               size_t poczatkowy_rozmiar = listaUzytkownikow.size();
 
-              usunUrzytkownika(listaUzytkownikow, temp);
+              Uzytkownik::usunUzytkownika(listaUzytkownikow, temp);
 
               if(listaUzytkownikow.size() < poczatkowy_rozmiar)
                 {
                   cout << "│ Usunieto uzytkownika o ID: " << temp << endl;
-                  zapiszUrzytkownika(listaUzytkownikow);
+          Uzytkownik::zapiszUzytkownika(listaUzytkownikow);
                 }
               else
                 {
@@ -452,9 +452,9 @@ int main()
               string nowy_id = imie.substr(0, 3) + nazwisko.substr(0, 3)
                                + to_string(rand() % 1000);
               listaUzytkownikow.push_back(
-                Urzytkownik(imie, nazwisko, nowy_id, haslo));
+                Uzytkownik(imie, nazwisko, nowy_id, haslo));
 
-              zapiszUrzytkownika(listaUzytkownikow);
+        Uzytkownik::zapiszUzytkownika(listaUzytkownikow);
 
               cout << "│ Dodano: " << imie << " " << nazwisko << endl;
               cout << "└────────────────────────────────────┘" << endl;
@@ -478,12 +478,12 @@ int main()
 
               size_t poczatkowy_rozmiar = listaUzytkownikow.size();
 
-              usunUrzytkownika(listaUzytkownikow, temp);
+              Uzytkownik::usunUzytkownika(listaUzytkownikow, temp);
 
               if(listaUzytkownikow.size() < poczatkowy_rozmiar)
                 {
                   cout << "│ Usunieto uzytkownika o ID: " << temp << endl;
-                  zapiszUrzytkownika(listaUzytkownikow);
+                  Uzytkownik::zapiszUzytkownika(listaUzytkownikow);
                 }
               else
                 {
