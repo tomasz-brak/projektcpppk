@@ -43,3 +43,5 @@
 .idea/*
 .cache/*
 out/Debug/*
+out/*
+compile_commands.json
