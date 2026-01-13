@@ -3,10 +3,8 @@
 #include <string>
 #include <list>
 #include <fstream>
-#include <list>
 
-class Uzytkownik
-{
+class Uzytkownik {
 public:
   Uzytkownik(std::string i, std::string n, std::string ID, std::string h);
   bool czyPoprawneDaneLogowania(const std::string &login,
@@ -28,8 +26,7 @@ public:
     plik.close();
   }
 
-  static void
-  usunUzytkownika(std::list<Uzytkownik> &uzytkownicy, const std::string &id)
+  static void usunUzytkownika(std::list<Uzytkownik> &uzytkownicy, const std::string &id)
   {
     uzytkownicy.remove_if([&id](const Uzytkownik &u) { return u.id == id; });
   }

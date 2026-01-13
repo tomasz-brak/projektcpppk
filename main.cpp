@@ -64,15 +64,7 @@ void odczytajKsiazki(list<Ksiazka> &ksiazki)
   plik.close();
 }
 
-void zapiszKsiazki(list<Ksiazka> &ksiazki)
-{
-  ofstream plik("ksiazki.txt");
-  for(auto &k : ksiazki)
-    {
-      plik << k.daneDoZapisu() << endl;
-    }
-  plik.close();
-}
+
 
 int main()
 {
@@ -164,7 +156,7 @@ int main()
                                + to_string(rand() % 1000);
               listaKsiazek.push_back(
                 Ksiazka(tytul, autor, stof(cena), nowy_id, "ksiazka"));
-              zapiszKsiazki(listaKsiazek);
+              Ksiazka::zapiszKsiazki(listaKsiazek);
 
               cout << "│ Dodano książkę: " << tytul << endl;
               cout << "└────────────────────────────────────┘" << endl;
@@ -173,6 +165,7 @@ int main()
             }
           else if(opcja[0] == 'a')
             {
+              wyczyscKonsole();
               wyczyscKonsole();
 
               cout << "┌─────────── USUŃ KSIĄŻKĘ ───────────┐" << endl;
@@ -193,7 +186,7 @@ int main()
               if(listaKsiazek.size() < poczatkowy_rozmiar)
                 {
                   cout << "│ Usunieto książkę o ID: " << temp << endl;
-                  zapiszKsiazke(listaKsiazek);
+                  Ksiazka::zapiszKsiazki(listaKsiazek);
                 }
               else
                 {
@@ -367,7 +360,7 @@ int main()
                                + to_string(rand() % 1000);
               listaKsiazek.push_back(
                 Ksiazka(tytul, autor, stof(cena), nowy_id, "ksiazka"));
-              zapiszKsiazke(listaKsiazek);
+              Ksiazka::zapiszKsiazki(listaKsiazek);
 
               cout << "│ Dodano książkę: " << tytul << endl;
               cout << "└────────────────────────────────────┘" << endl;
@@ -396,7 +389,7 @@ int main()
               if(listaKsiazek.size() < poczatkowy_rozmiar)
                 {
                   cout << "│ Usunieto książkę o ID: " << temp << endl;
-                  zapiszKsiazke(listaKsiazek);
+                  Ksiazka::zapiszKsiazki(listaKsiazek);
                 }
               else
                 {

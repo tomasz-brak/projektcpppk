@@ -1,5 +1,6 @@
 #ifndef Ksiazka_H
 #define Ksiazka_H
+#include <fstream>
 #include <string>
 #include <list>
 
@@ -14,6 +15,16 @@ public:
     float cena;
     std::string id2;
     std::string id;
+
+  static void zapiszKsiazki(std::list<Ksiazka> &ksiazki)
+  {
+    std::ofstream plik("ksiazki.txt");
+    for(auto &k : ksiazki)
+      {
+        plik << k.daneDoZapisu() << std::endl;
+      }
+    plik.close();
+  }
 };
 
 #endif
