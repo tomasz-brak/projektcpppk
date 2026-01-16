@@ -14,6 +14,8 @@ target_sources(MyProgram
     Uzytkownik.cpp
     Ksiazka.cpp
     Ksiazka.h
+    Display.h
+    Display.cpp
 )
 
 

@@ -1,11 +1,14 @@
+#include <cstdio>
 #include <iostream>
 #include <fstream>
+#include <memory>
 #include <string>
 #include <list>
 #include <cstdlib>
 #include <sstream>
 #include <ctime>
 #include <clocale>
+#include "Display.h"
 #include "Ksiazka.h"
 #include "Uzytkownik.h"
 #ifdef _WIN32
@@ -86,6 +89,14 @@ int main()
   string login, haslo;
   bool istnieje = false;
 
+  auto display = make_unique<Display>();
+  display->box();
+  display->add(make_unique<string>("Test 123\ncos tam innego\n"));
+  display->sectionBreak();
+  display->add(make_unique<string>("test 456"));
+  display->show();
+
+  getline(cin, user_input);
   wyczyscKonsole();
 
   cout << "┌──────────── KSIĘGARNIA ────────────┐" << endl;
