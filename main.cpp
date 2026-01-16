@@ -94,6 +94,7 @@ int main()
   display->add(make_unique<string>("Test 123\ncos tam innego\n"));
   display->sectionBreak();
   display->add(make_unique<string>("test 456"));
+  display->ask({"1111", "2222", "3333"});
   display->show();
 
   getline(cin, user_input);

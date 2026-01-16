@@ -1,5 +1,8 @@
 #include "Display.h"
+#include <atomic>
+#include <cstdio>
 #include <functional>
+#include <initializer_list>
 #include <memory>
 #include <print>
 #include <string>
@@ -12,6 +15,22 @@
 #else
 #include <unistd.h>
 #endif
+
+#ifdef _WIN32
+#include <conio.h>
+#else
+#include <termios.h>
+#include <unistd.h>
+#include <stdio.h>
+#endif
+
+enum Key
+{
+  NONE,
+  UP,
+  DOWN,
+  QUIT
+};
 
 void clearConsole()
 {
@@ -47,6 +66,71 @@ void clearConsole()
   std::cout << "\x1b[2J\x1b[H" << std::flush;
 #endif
 }
+
+#ifdef _WIN32
+Key getKey()
+{
+  if(!_kbhit())
+    return NONE;
+  int ch = _getch();
+  if(ch == 0 || ch == 224)
+    {
+      ch = _getch();
+      if(ch == 72)
+        return UP;
+      if(ch == 80)
+        return DOWN;
+    }
+  if(ch == 'q' || ch == 'Q')
+    return QUIT;
+  return NONE;
+}
+#else
+
+void setRawMode(bool enable)
+{
+  static struct termios oldt, newt;
+  if(enable)
+    {
+      tcgetattr(STDIN_FILENO, &oldt);
+      newt = oldt;
+      newt.c_lflag &= ~(ICANON | ECHO);
+      tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    }
+  else
+    {
+      tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    }
+}
+
+Key getKey()
+{
+  char ch;
+  if(read(STDIN_FILENO, &ch, 1) <= 0)
+    return NONE;
+
+  if(ch == 27)
+    {
+      char seq[2];
+      if(read(STDIN_FILENO, &seq[0], 1) > 0
+         && read(STDIN_FILENO, &seq[1], 1) > 0)
+        {
+          if(seq[0] == '[')
+            {
+              if(seq[1] == 'A')
+                return UP;
+              if(seq[1] == 'B')
+                return DOWN;
+            }
+        }
+    }
+  else if(ch == 'q' || ch == 'Q')
+    {
+      return QUIT;
+    }
+  return NONE;
+}
+#endif
 
 /**
  * Splits a string by a delimiter and executes a callback for each substring.
@@ -128,6 +212,33 @@ void Display::show()
     {
       std::print("╰{}╯\n", generateHr("─", longestLine));
     }
+
+  if(isQuestion)
+    {
+      bool anwsered = false;
+      auto current_anwser = 0;
+      while(!anwsered)
+        {
+          std::print("Użyj 🔼 🔽 by wybrać: {}", options[current_anwser]);
+          auto k = getKey();
+          if(k == UP)
+            {
+              ++current_anwser;
+            }
+          else if(k == DOWN)
+            {
+              --current_anwser;
+            }
+
+          if(current_anwser < 0)
+            {
+              current_anwser = options.size() - 1;
+            }
+          if(current_anwser >= options.size())
+            ;
+          current_anwser = 0;
+        }
+    }
 }
 /**
  * @brief Dodaje linijkę/linijki do teksku
@@ -162,5 +273,13 @@ void Display::sectionBreak()
 void Display::clear()
 {
   Display::sections.clear();
+  isBox = false;
+  isQuestion = false;
   clearConsole();
+}
+
+void Display::ask(const std::initializer_list<std::string> anwsers)
+{
+  Display::options = anwsers;
+  isQuestion = true;
 }
