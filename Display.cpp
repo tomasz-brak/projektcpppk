@@ -10,7 +10,7 @@
 #include <iostream>
 
 #if defined(_WIN32) || defined(_WIN64)
-#define NOMINMAX
+// #define NOMINMAX
 #include <windows.h>
 #else
 #include <unistd.h>
@@ -73,8 +73,6 @@ void clearConsole()
 #ifdef _WIN32
 Key getKey()
 {
-  if(!_kbhit())
-    return NONE;
   int ch = _getch();
   if(ch == 13)
     return ENTER;
