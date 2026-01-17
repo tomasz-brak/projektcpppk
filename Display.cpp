@@ -29,8 +29,11 @@ enum Key
   NONE,
   UP,
   DOWN,
-  QUIT
+  QUIT,
+  ENTER
 };
+
+std::string DEBUG_last_string;
 
 void clearConsole()
 {
@@ -73,6 +76,8 @@ Key getKey()
   if(!_kbhit())
     return NONE;
   int ch = _getch();
+  if(ch == 13)
+    return ENTER;
   if(ch == 0 || ch == 224)
     {
       ch = _getch();
@@ -105,9 +110,13 @@ void setRawMode(bool enable)
 
 Key getKey()
 {
+  std::print("Wating for input: ");
   char ch;
   if(read(STDIN_FILENO, &ch, 1) <= 0)
     return NONE;
+
+  if(ch == '\n' || ch == '\r')
+    return ENTER;
 
   if(ch == 27)
     {
@@ -118,9 +127,15 @@ Key getKey()
           if(seq[0] == '[')
             {
               if(seq[1] == 'A')
-                return UP;
+                {
+                  DEBUG_last_string = "ArrA";
+                  return UP;
+                }
               if(seq[1] == 'B')
-                return DOWN;
+                {
+                  DEBUG_last_string = "arrB";
+                  return DOWN;
+                }
             }
         }
     }
@@ -215,30 +230,49 @@ void Display::show()
 
   if(isQuestion)
     {
-      bool anwsered = false;
-      auto current_anwser = 0;
-      while(!anwsered)
-        {
-          std::print("Użyj 🔼 🔽 by wybrać: {}", options[current_anwser]);
-          auto k = getKey();
-          if(k == UP)
-            {
-              ++current_anwser;
-            }
-          else if(k == DOWN)
-            {
-              --current_anwser;
-            }
+#ifndef _WIN32
+      setRawMode(true);
+#endif
+      {
+        if(anwsered)
+          {
+            clearConsole();
+            return;
+          }
+        std::print("{}) Użyj 🔼 🔽 by wybrać: {}\n", current_anwser + 1,
+                   options[current_anwser]);
+        std::fflush(stdout);
 
-          if(current_anwser < 0)
-            {
-              current_anwser = options.size() - 1;
-            }
-          if(current_anwser >= options.size())
-            ;
-          current_anwser = 0;
-        }
+        auto k = getKey();
+        if(k == UP)
+          {
+            current_anwser++;
+            std::print("Kup");
+          }
+        else if(k == DOWN)
+          {
+            current_anwser--;
+            std::print("Kdown ");
+          }
+
+        if(k == ENTER)
+          {
+            anwsered = true;
+          }
+
+        if(current_anwser < 0)
+          {
+            current_anwser = options.size() - 1;
+          }
+        if(current_anwser >= options.size())
+          {
+            current_anwser = 0;
+          }
+        clearConsole();
+        show();
+      }
     }
+  clearConsole();
 }
 /**
  * @brief Dodaje linijkę/linijki do teksku
@@ -273,8 +307,10 @@ void Display::sectionBreak()
 void Display::clear()
 {
   Display::sections.clear();
+  Display::options.clear();
   isBox = false;
   isQuestion = false;
+  anwsered = false;
   clearConsole();
 }
 

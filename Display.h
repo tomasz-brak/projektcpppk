@@ -1,10 +1,7 @@
 #pragma once
-#include <deque>
 #include <initializer_list>
 #include <memory>
-#include <span>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 class Display
@@ -35,6 +32,9 @@ private:
   inline static bool isBox;
   inline static int longestLine;
   inline static bool isQuestion;
+
+  inline static bool anwsered = false;
+  inline static int current_anwser = 0;
 
   static std::string generateHr(const std::string a, const int len);
   static void processLine();
