@@ -1,6 +1,7 @@
 #include "Display.h"
 #include <atomic>
 #include <cstdio>
+#include <format>
 #include <functional>
 #include <initializer_list>
 #include <memory>
@@ -221,11 +222,6 @@ void Display::show()
         }
     }
 
-  if(isBox)
-    {
-      std::print("╰{}╯\n", generateHr("─", longestLine));
-    }
-
   if(isQuestion)
     {
 #ifndef _WIN32
@@ -237,10 +233,20 @@ void Display::show()
             clearConsole();
             return;
           }
-        std::print("{}) Użyj 🔼 🔽 by wybrać: {}\n", current_anwser + 1,
-                   options[current_anwser]);
-        std::fflush(stdout);
 
+        if(isBox)
+          {
+            auto out = std::format("{}) {}", current_anwser + 1,
+                                   options[current_anwser]);
+            std::print("│{}{}│\n", out,
+                       std::string(longestLine - out.length(), ' '));
+            std::print("╰{}╯\n", generateHr("─", longestLine));
+          }
+        else
+          {
+            std::print("{} {}\n", current_anwser + 1, options[current_anwser]);
+          }
+        std::fflush(stdout);
         auto k = getKey();
         if(k == UP)
           {
@@ -267,10 +273,16 @@ void Display::show()
             current_anwser = 0;
           }
         clearConsole();
-        show();
       }
     }
-  clearConsole();
+  if(isBox && !isQuestion)
+    {
+      std::print("╰{}╯\n", generateHr("─", longestLine));
+    }
+  if(isQuestion && !anwsered)
+    {
+      show();
+    }
 }
 /**
  * @brief Dodaje linijkę/linijki do teksku
@@ -316,4 +328,14 @@ void Display::ask(const std::initializer_list<std::string> anwsers)
 {
   Display::options = anwsers;
   isQuestion = true;
+  int n = 1;
+  for(auto &anwser : anwsers)
+    {
+      auto s = std::format("{}) {}", n, anwser);
+      if(s.length() > longestLine)
+        {
+          longestLine = s.length();
+        }
+      n++;
+    }
 }
