@@ -226,8 +226,39 @@ void Display::show()
   if(isQuestion)
     {
 #ifndef _WIN32
-      if(isQuestion)
-        setRawMode(true);
+      char c = 0;
+      if(read(STDIN_FILENO, &c, 1) > 0)
+        {
+          if(c == '\n' || c == '\r')
+            {
+              anwsered = true;
+            }
+          else if(c == 127 || c == 8)
+            {
+              if(!Display::userInput.empty())
+                Display::userInput.pop_back();
+            }
+          else if(c >= 32 && c < 127)
+            {
+              Display::userInput += c;
+            }
+        }
+#else
+      int c = _getch();
+      if(c == 13)
+        {
+          anwsered = true;
+          Display::userInput.clear();
+        }
+      else if(c == 8)
+        {
+          if(!Display::userInput.empty())
+            Display::userInput.pop_back();
+        }
+      else if(c >= 32 && c <= 126)
+        {
+          Display::userInput += static_cast<char>(c);
+        }
 #endif
 
       if(isBox)
@@ -314,6 +345,7 @@ void Display::clear()
   isBox = false;
   isQuestion = false;
   anwsered = false;
+  longestLine = 0;
   userInput = "";
   clearConsole();
 }
@@ -335,3 +367,15 @@ void Display::ask(const std::initializer_list<std::string> anwsers)
 }
 
 void Display::ask() { isQuestion = true; }
+
+std::string Display::singleQuestion(std::string q)
+{
+  auto display = std::make_unique<Display>();
+  display->clear();
+  display->box();
+  display->add(std::make_unique<std::string>(q));
+  display->sectionBreak();
+  display->ask();
+  display->show();
+  return display->userInput;
+}

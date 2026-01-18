@@ -49,5 +49,7 @@ public:
   static void sectionBreak();
   static void clearConsole();
 
+  static std::string singleQuestion(std::string q);
+
   inline static std::string userInput;
 };
