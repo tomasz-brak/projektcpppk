@@ -34,7 +34,6 @@ private:
   inline static bool isQuestion;
 
   inline static bool anwsered = false;
-  inline static int current_anwser = 0;
 
   static std::string generateHr(const std::string a, const int len);
   static void processLine();
@@ -43,7 +42,7 @@ public:
   static void show();
   static void clear();
   static void box();
-  static void ask(const std::initializer_list<std::string> anwsers);
+  static void ask(const std::vector<std::string> anwsers);
   static void ask();
   static void add(std::unique_ptr<std::string> s);
   static void sectionBreak();
@@ -51,5 +50,6 @@ public:
 
   static std::string singleQuestion(std::string q);
 
+  inline static int current_anwser = 0;
   inline static std::string userInput;
 };

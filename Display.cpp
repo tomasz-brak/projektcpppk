@@ -1,11 +1,11 @@
 #include "Display.h"
 #include <cstdio>
 #include <functional>
-#include <initializer_list>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <iostream>
+#include <vector>
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
@@ -194,7 +194,6 @@ void Display::show()
         {
           if(isBox)
             {
-              // Zmienione [this] na [lLine = longestLine]
               operateOnSubStrings(
                 *section->text, "\n",
                 [lLine = longestLine](const std::string substr) {
@@ -350,7 +349,7 @@ void Display::clear()
   clearConsole();
 }
 
-void Display::ask(const std::initializer_list<std::string> anwsers)
+void Display::ask(const std::vector<std::string> anwsers)
 {
   Display::options = anwsers;
   isQuestion = true;
