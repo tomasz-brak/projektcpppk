@@ -1,38 +1,26 @@
-#ifndef Ksiazka_H
-#define Ksiazka_H
-#include <fstream>
+#ifndef KSIAZKA_H
+#define KSIAZKA_H
+
 #include <string>
 #include <list>
 
 class Ksiazka
 {
 public:
-  Ksiazka(std::string tyt, std::string aut, float cena, std::string i,
-          std::string id2);
-  std::string daneDoZapisu();
-
-  std::string tytul;
-  std::string autor;
-  float cena;
-  std::string id2;
-  std::string id;
-
-  static void zapiszKsiazki(std::list<Ksiazka> &ksiazki)
-  {
-    std::ofstream plik("ksiazki.txt");
-    for(auto &k : ksiazki)
-      {
-        plik << k.daneDoZapisu() << std::endl;
-      }
-    plik.close();
     std::string tytul;
     std::string autor;
     float cena;
-    std::string id2;
     std::string id;
-  };
+    std::string id2;
 
-  static void usunKsiazke(std::list<Ksiazka> &ksiazki, std::string ksiazka);
+    Ksiazka(std::string tyt, std::string aut, float c, std::string i, std::string id2);
 
-#endif
+    // DODANE const
+    std::string daneDoZapisu() const;
+
+    static void usunKsiazke(std::list<Ksiazka>& ksiazki, std::string id);
+
+    static void zapiszKsiazki(const std::list<Ksiazka>& ksiazki);
 };
+
+#endif // KSIAZKA_H

@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/MyProgram.dir/main.cpp.o CMakeFiles/MyProgram.dir/Uzytkownik.cpp.o CMakeFiles/MyProgram.dir/Ksiazka.cpp.o CMakeFiles/MyProgram.dir/Display.cpp.o -o MyProgram 

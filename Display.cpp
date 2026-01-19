@@ -1,17 +1,13 @@
 #include "Display.h"
 #include <atomic>
 #include <cstdio>
-#include <format>
 #include <functional>
 #include <initializer_list>
 #include <memory>
-#include <print>
 #include <string>
-
 #include <iostream>
 
 #if defined(_WIN32) || defined(_WIN64)
-// #define NOMINMAX
 #include <windows.h>
 #else
 #include <unistd.h>
@@ -109,7 +105,7 @@ void setRawMode(bool enable)
 
 Key getKey()
 {
-  std::print("Wating for input: ");
+  std::cout << "Waiting for input: " << std::flush;
   char ch;
   if(read(STDIN_FILENO, &ch, 1) <= 0)
     return NONE;
@@ -146,13 +142,6 @@ Key getKey()
 }
 #endif
 
-/**
- * Splits a string by a delimiter and executes a callback for each substring.
- *
- * @param input The original string to split.
- * @param delimiter The string to split by.
- * @param func A lambda or function that takes a const std::string&.
- */
 void operateOnSubStrings(const std::string &input,
                          const std::string &delimiter,
                          std::function<void(const std::string &)> func)
@@ -181,14 +170,11 @@ std::string Display::generateHr(const std::string a, const int len)
   return s;
 }
 
-/**
- * @brief Wypisuje "widok w konsoli"
- */
 void Display::show()
 {
   if(isBox)
     {
-      std::print("╭{}╮\n", generateHr("─", longestLine));
+      std::cout << "╭" << generateHr("─", longestLine) << "╮" << std::endl;
     }
 
   for(auto &section : Display::sections)
@@ -197,27 +183,28 @@ void Display::show()
         {
           if(isBox)
             {
+              // Zmienione [this] na [lLine = longestLine]
               operateOnSubStrings(
-                *section->text, "\n", [](const std::string substr) {
-                  std::print("│{}{}│\n", substr,
-                             std::string(longestLine - substr.length(), ' '));
+                *section->text, "\n", [lLine = longestLine](const std::string substr) {
+                  std::cout << "│" << substr 
+                            << std::string(lLine - substr.length(), ' ') 
+                            << "│" << std::endl;
                 });
             }
           else
             {
-              std::print("{}", *section->text);
+              std::cout << *section->text;
             }
         }
       else if(section->type == SECTION_BREAK)
         {
           if(isBox)
             {
-              std::print("├{}┤\n", generateHr("─", longestLine));
+              std::cout << "├" << generateHr("─", longestLine) << "┤" << std::endl;
             }
           else
             {
-              std::print("{}\n",
-                         generateHr(std::to_string(DELIMETER), longestLine));
+              std::cout << generateHr(std::to_string(DELIMETER), longestLine) << std::endl;
             }
         }
     }
@@ -236,27 +223,26 @@ void Display::show()
 
         if(isBox)
           {
-            auto out = std::format("{}) {}", current_anwser + 1,
-                                   options[current_anwser]);
-            std::print("│{}{}│\n", out,
-                       std::string(longestLine - out.length(), ' '));
-            std::print("╰{}╯\n", generateHr("─", longestLine));
+            std::string out = std::to_string(current_anwser + 1) + ") " + options[current_anwser];
+            std::cout << "│" << out 
+                      << std::string(longestLine - out.length(), ' ') 
+                      << "│" << std::endl;
+            std::cout << "╰" << generateHr("─", longestLine) << "╯" << std::endl;
           }
         else
           {
-            std::print("{} {}\n", current_anwser + 1, options[current_anwser]);
+            std::cout << (current_anwser + 1) << " " << options[current_anwser] << std::endl;
           }
-        std::fflush(stdout);
+        
+        std::cout << std::flush;
         auto k = getKey();
         if(k == UP)
           {
             current_anwser++;
-            std::print("Kup");
           }
         else if(k == DOWN)
           {
             current_anwser--;
-            std::print("Kdown ");
           }
 
         if(k == ENTER)
@@ -268,7 +254,7 @@ void Display::show()
           {
             current_anwser = options.size() - 1;
           }
-        if(current_anwser >= options.size())
+        if(current_anwser >= (int)options.size())
           {
             current_anwser = 0;
           }
@@ -277,18 +263,14 @@ void Display::show()
     }
   if(isBox && !isQuestion)
     {
-      std::print("╰{}╯\n", generateHr("─", longestLine));
+      std::cout << "╰" << generateHr("─", longestLine) << "╯" << std::endl;
     }
   if(isQuestion && !anwsered)
     {
       show();
     }
 }
-/**
- * @brief Dodaje linijkę/linijki do teksku
- *
- * @param s należy zakończyć \n
- */
+
 void Display::add(std::unique_ptr<std::string> s)
 {
   operateOnSubStrings(*s, "\n", [](std::string substr) {
@@ -297,7 +279,7 @@ void Display::add(std::unique_ptr<std::string> s)
   });
 
   if(Display::sections.empty()
-     or Display::sections.back()->type == SECTION_BREAK)
+     || Display::sections.back()->type == SECTION_BREAK)
     {
       Display::sections.emplace_back(
         std::make_unique<MessagePart>(std::move(s), MessageType::TEXT));
@@ -331,10 +313,10 @@ void Display::ask(const std::initializer_list<std::string> anwsers)
   int n = 1;
   for(auto &anwser : anwsers)
     {
-      auto s = std::format("{}) {}", n, anwser);
-      if(s.length() > longestLine)
+      std::string s = std::to_string(n) + ") " + anwser;
+      if(s.length() > (size_t)longestLine)
         {
-          longestLine = s.length();
+          longestLine = (int)s.length();
         }
       n++;
     }
