@@ -30,10 +30,6 @@ std::string DEBUG_last_string;
 /**
  * @brief Splits a string by a delimiter and executes a callback for each
  * substring.
- *
- * @param input The original string to split.
- * @param delimiter The string to split by.
- * @param func A lambda or function that takes a const std::string&.
  */
 void operateOnSubStrings(const std::string &input,
                          const std::string &delimiter,
@@ -52,35 +48,9 @@ void operateOnSubStrings(const std::string &input,
   func(input.substr(start));
 }
 
-#ifdef _WIN32
-
-/**
- * @brief Reads a key press from the console on Windows.
- * @return The Key enum value corresponding to the pressed key.
- */
-Key getKey()
-{
-  int ch = _getch();
-  if(ch == 13)
-    return ENTER;
-  if(ch == 0 || ch == 224)
-    {
-      ch = _getch();
-      if(ch == 72)
-        return UP;
-      if(ch == 80)
-        return DOWN;
-    }
-  if(ch == 'q' || ch == 'Q')
-    return QUIT;
-  return NONE;
-}
-
-#else
-
+#ifndef _WIN32
 /**
  * @brief Enables or disables raw mode for terminal input on Linux.
- * @param enable True to enable raw mode, false to disable.
  */
 void setRawMode(bool enable)
 {
@@ -96,48 +66,6 @@ void setRawMode(bool enable)
     {
       tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
     }
-}
-
-/**
- * @brief Reads a key press from the console on Linux.
- * @return
- */
-Key getKey()
-{
-  std::cout << "Waiting for input: " << std::flush;
-  char ch;
-  if(read(STDIN_FILENO, &ch, 1) <= 0)
-    return NONE;
-
-  if(ch == '\n' || ch == '\r')
-    return ENTER;
-
-  if(ch == 27)
-    {
-      char seq[2];
-      if(read(STDIN_FILENO, &seq[0], 1) > 0
-         && read(STDIN_FILENO, &seq[1], 1) > 0)
-        {
-          if(seq[0] == '[')
-            {
-              if(seq[1] == 'A')
-                {
-                  DEBUG_last_string = "ArrA";
-                  return UP;
-                }
-              if(seq[1] == 'B')
-                {
-                  DEBUG_last_string = "arrB";
-                  return DOWN;
-                }
-            }
-        }
-    }
-  else if(ch == 'q' || ch == 'Q')
-    {
-      return QUIT;
-    }
-  return NONE;
 }
 #endif
 
@@ -224,13 +152,28 @@ void Display::show()
 
   if(isQuestion)
     {
+      Key k = NONE;
+
 #ifndef _WIN32
       char c = 0;
       if(read(STDIN_FILENO, &c, 1) > 0)
         {
           if(c == '\n' || c == '\r')
             {
-              anwsered = true;
+              k = ENTER;
+            }
+          else if(c == 27) // Escape char
+            {
+              char seq[2];
+              // Try to read arrow keys
+              if(read(STDIN_FILENO, &seq[0], 1) > 0
+                 && read(STDIN_FILENO, &seq[1], 1) > 0)
+                {
+                  if(seq[0] == '[' && seq[1] == 'A')
+                    k = UP;
+                  else if(seq[0] == '[' && seq[1] == 'B')
+                    k = DOWN;
+                }
             }
           else if(c == 127 || c == 8)
             {
@@ -246,8 +189,15 @@ void Display::show()
       int c = _getch();
       if(c == 13)
         {
-          anwsered = true;
-          Display::userInput.clear();
+          k = ENTER;
+        }
+      else if(c == 0 || c == 224)
+        {
+          int arrow = _getch();
+          if(arrow == 72)
+            k = UP;
+          else if(arrow == 80)
+            k = DOWN;
         }
       else if(c == 8)
         {
@@ -262,21 +212,32 @@ void Display::show()
 
       if(isBox)
         {
-          std::string out = std::to_string(current_anwser + 1) + ") "
-                            + options[current_anwser];
-          std::cout << "│" << out
-                    << std::string(longestLine - out.length(), ' ') << "│"
-                    << std::endl;
-          std::cout << "╰" << generateHr("─", longestLine) << "╯" << std::endl;
+          if(!options.empty())
+            {
+              std::string out = std::to_string(current_anwser + 1) + ") "
+                                + options[current_anwser];
+              std::cout << "│" << out
+                        << std::string(longestLine - out.length(), ' ') << "│"
+                        << std::endl;
+              std::cout << "╰" << generateHr("─", longestLine) << "╯"
+                        << std::endl;
+            }
+          else
+            {
+              std::cout << "╰" << generateHr("─", longestLine) << "╯"
+                        << std::endl;
+            }
         }
       else
         {
-          std::cout << (current_anwser + 1) << " " << options[current_anwser]
-                    << std::endl;
+          if(!options.empty())
+            std::cout << (current_anwser + 1) << " " << options[current_anwser]
+                      << std::endl;
         }
 
       std::cout << std::flush;
-      auto k = getKey();
+
+      // Removed secondary read (getKey) and used the 'k' determined above
       if(k == UP)
         {
           current_anwser++;
@@ -289,16 +250,22 @@ void Display::show()
       if(k == ENTER)
         {
           anwsered = true;
+          // Note: userInput clearing moved to caller if needed,
+          // or handle it here if it was intended to clear on enter.
+          // Original code cleared it only on Windows inside the loop.
+          // Keeping it as is (accumulating) for singleQuestion to work.
         }
 
       if(current_anwser < 0)
         {
           current_anwser = options.size() - 1;
         }
-      if(current_anwser >= (int)options.size())
+
+      if(!options.empty() && current_anwser >= (int)options.size())
         {
           current_anwser = 0;
         }
+
       clearConsole();
     }
 
