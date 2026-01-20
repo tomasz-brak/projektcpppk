@@ -18,9 +18,9 @@ private:
   {
   public:
     MessagePart(std::unique_ptr<std::string> text, MessageType type)
-        : text(std::move(text)), type(type){};
+        : text(std::move(text)), type(type) {};
 
-    MessagePart(MessageType type) : type(type){};
+    MessagePart(MessageType type) : type(type) {};
 
     const MessageType type;
     std::unique_ptr<std::string> text;
@@ -44,6 +44,10 @@ public:
   static void clear();
   static void box();
   static void ask(const std::initializer_list<std::string> anwsers);
+  static void ask();
   static void add(std::unique_ptr<std::string> s);
   static void sectionBreak();
+  static void clearConsole();
+
+  inline static std::string userInput;
 };

@@ -1,24 +1,19 @@
 #include "Display.h"
-#include <atomic>
 #include <cstdio>
 #include <functional>
 #include <initializer_list>
+#include <iostream>
 #include <memory>
 #include <string>
 #include <iostream>
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
-#else
-#include <unistd.h>
-#endif
-
-#ifdef _WIN32
 #include <conio.h>
 #else
+#include <stdio.h>
 #include <termios.h>
 #include <unistd.h>
-#include <stdio.h>
 #endif
 
 enum Key
@@ -27,47 +22,42 @@ enum Key
   UP,
   DOWN,
   QUIT,
-  ENTER
+  ENTER,
 };
 
 std::string DEBUG_last_string;
 
-void clearConsole()
+/**
+ * @brief Splits a string by a delimiter and executes a callback for each
+ * substring.
+ *
+ * @param input The original string to split.
+ * @param delimiter The string to split by.
+ * @param func A lambda or function that takes a const std::string&.
+ */
+void operateOnSubStrings(const std::string &input,
+                         const std::string &delimiter,
+                         std::function<void(const std::string &)> func)
 {
-#if defined(_WIN32) || defined(_WIN64)
-  HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-  if(hOut == INVALID_HANDLE_VALUE)
-    return;
+  size_t start = 0;
+  size_t end = input.find(delimiter);
 
-  CONSOLE_SCREEN_BUFFER_INFO csbi;
-  if(!GetConsoleScreenBufferInfo(hOut, &csbi))
+  while(end != std::string::npos)
     {
-      return;
+      func(input.substr(start, end - start));
+      start = end + delimiter.length();
+      end = input.find(delimiter, start);
     }
 
-  DWORD cellCount
-    = static_cast<DWORD>(csbi.dwSize.X) * static_cast<DWORD>(csbi.dwSize.Y);
-  COORD homeCoords = {0, 0};
-  DWORD count;
-
-  if(!FillConsoleOutputCharacterA(hOut, ' ', cellCount, homeCoords, &count))
-    {
-      return;
-    }
-
-  if(!FillConsoleOutputAttribute(hOut, csbi.wAttributes, cellCount, homeCoords,
-                                 &count))
-    {
-      return;
-    }
-
-  SetConsoleCursorPosition(hOut, homeCoords);
-#else
-  std::cout << "\x1b[2J\x1b[H" << std::flush;
-#endif
+  func(input.substr(start));
 }
 
 #ifdef _WIN32
+
+/**
+ * @brief Reads a key press from the console on Windows.
+ * @return The Key enum value corresponding to the pressed key.
+ */
 Key getKey()
 {
   int ch = _getch();
@@ -85,8 +75,13 @@ Key getKey()
     return QUIT;
   return NONE;
 }
+
 #else
 
+/**
+ * @brief Enables or disables raw mode for terminal input on Linux.
+ * @param enable True to enable raw mode, false to disable.
+ */
 void setRawMode(bool enable)
 {
   static struct termios oldt, newt;
@@ -103,6 +98,10 @@ void setRawMode(bool enable)
     }
 }
 
+/**
+ * @brief Reads a key press from the console on Linux.
+ * @return
+ */
 Key getKey()
 {
   std::cout << "Waiting for input: " << std::flush;
@@ -142,27 +141,39 @@ Key getKey()
 }
 #endif
 
-void operateOnSubStrings(const std::string &input,
-                         const std::string &delimiter,
-                         std::function<void(const std::string &)> func)
+void Display::clearConsole()
 {
-  size_t start = 0;
-  size_t end = input.find(delimiter);
+#if defined(_WIN32) || defined(_WIN64)
+  HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+  if(hOut == INVALID_HANDLE_VALUE)
+    return;
 
-  while(end != std::string::npos)
-    {
-      func(input.substr(start, end - start));
+  CONSOLE_SCREEN_BUFFER_INFO csbi;
+  if(!GetConsoleScreenBufferInfo(hOut, &csbi))
+    return;
 
-      start = end + delimiter.length();
-      end = input.find(delimiter, start);
-    }
+  DWORD cellCount
+    = static_cast<DWORD>(csbi.dwSize.X) * static_cast<DWORD>(csbi.dwSize.Y);
+  COORD homeCoords = {0, 0};
+  DWORD count;
 
-  func(input.substr(start));
+  if(!FillConsoleOutputCharacterA(hOut, ' ', cellCount, homeCoords, &count))
+    return;
+
+  if(!FillConsoleOutputAttribute(hOut, csbi.wAttributes, cellCount, homeCoords,
+                                 &count))
+    return;
+
+  SetConsoleCursorPosition(hOut, homeCoords);
+#else
+  std::cout << "\x1b[2J\x1b[H" << std::flush;
+#endif
 }
 
 std::string Display::generateHr(const std::string a, const int len)
 {
   std::string s;
+  s.reserve(len * a.length());
   for(int x = 0; x < len; ++x)
     {
       s += a;
@@ -185,10 +196,11 @@ void Display::show()
             {
               // Zmienione [this] na [lLine = longestLine]
               operateOnSubStrings(
-                *section->text, "\n", [lLine = longestLine](const std::string substr) {
-                  std::cout << "│" << substr 
-                            << std::string(lLine - substr.length(), ' ') 
-                            << "│" << std::endl;
+                *section->text, "\n",
+                [lLine = longestLine](const std::string substr) {
+                  std::cout << "│" << substr
+                            << std::string(lLine - substr.length(), ' ') << "│"
+                            << std::endl;
                 });
             }
           else
@@ -200,11 +212,13 @@ void Display::show()
         {
           if(isBox)
             {
-              std::cout << "├" << generateHr("─", longestLine) << "┤" << std::endl;
+              std::cout << "├" << generateHr("─", longestLine) << "┤"
+                        << std::endl;
             }
           else
             {
-              std::cout << generateHr(std::to_string(DELIMETER), longestLine) << std::endl;
+              std::cout << generateHr(std::to_string(DELIMETER), longestLine)
+                        << std::endl;
             }
         }
     }
@@ -212,55 +226,52 @@ void Display::show()
   if(isQuestion)
     {
 #ifndef _WIN32
-      setRawMode(true);
+      if(isQuestion)
+        setRawMode(true);
 #endif
-      {
-        if(anwsered)
-          {
-            clearConsole();
-            return;
-          }
 
-        if(isBox)
-          {
-            std::string out = std::to_string(current_anwser + 1) + ") " + options[current_anwser];
-            std::cout << "│" << out 
-                      << std::string(longestLine - out.length(), ' ') 
-                      << "│" << std::endl;
-            std::cout << "╰" << generateHr("─", longestLine) << "╯" << std::endl;
-          }
-        else
-          {
-            std::cout << (current_anwser + 1) << " " << options[current_anwser] << std::endl;
-          }
-        
-        std::cout << std::flush;
-        auto k = getKey();
-        if(k == UP)
-          {
-            current_anwser++;
-          }
-        else if(k == DOWN)
-          {
-            current_anwser--;
-          }
+      if(isBox)
+        {
+          std::string out = std::to_string(current_anwser + 1) + ") "
+                            + options[current_anwser];
+          std::cout << "│" << out
+                    << std::string(longestLine - out.length(), ' ') << "│"
+                    << std::endl;
+          std::cout << "╰" << generateHr("─", longestLine) << "╯" << std::endl;
+        }
+      else
+        {
+          std::cout << (current_anwser + 1) << " " << options[current_anwser]
+                    << std::endl;
+        }
 
-        if(k == ENTER)
-          {
-            anwsered = true;
-          }
+      std::cout << std::flush;
+      auto k = getKey();
+      if(k == UP)
+        {
+          current_anwser++;
+        }
+      else if(k == DOWN)
+        {
+          current_anwser--;
+        }
 
-        if(current_anwser < 0)
-          {
-            current_anwser = options.size() - 1;
-          }
-        if(current_anwser >= (int)options.size())
-          {
-            current_anwser = 0;
-          }
-        clearConsole();
-      }
+      if(k == ENTER)
+        {
+          anwsered = true;
+        }
+
+      if(current_anwser < 0)
+        {
+          current_anwser = options.size() - 1;
+        }
+      if(current_anwser >= (int)options.size())
+        {
+          current_anwser = 0;
+        }
+      clearConsole();
     }
+
   if(isBox && !isQuestion)
     {
       std::cout << "╰" << generateHr("─", longestLine) << "╯" << std::endl;
@@ -303,6 +314,7 @@ void Display::clear()
   isBox = false;
   isQuestion = false;
   anwsered = false;
+  userInput = "";
   clearConsole();
 }
 
@@ -321,3 +333,5 @@ void Display::ask(const std::initializer_list<std::string> anwsers)
       n++;
     }
 }
+
+void Display::ask() { isQuestion = true; }
