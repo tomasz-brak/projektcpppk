@@ -8,6 +8,8 @@
 #include <sstream>
 #include <ctime>
 #include <clocale>
+#include <vector>
+#include <algorithm>
 #include "Display.h"
 #include "Ksiazka.h"
 #include "Uzytkownik.h"
@@ -17,554 +19,714 @@
 
 using namespace std;
 
-
-void wyczyscKonsole()
+/**
+ * @brief Struktura przechowująca stałe tekstowe opcji menu.
+ */
+struct MenuOpcje
 {
-#ifdef _WIN32
-    system("cls");
-#else
-    system("clear");
-#endif
-}
+  /// @brief Tekst opcji dodawania książki.
+  inline static const std::string DODAJ_KSIAZKE = "Dodaj Książkę";
+  /// @brief Tekst opcji usuwania książki.
+  inline static const std::string USUN_KSIAZKE = "Usuń książkę";
+  /// @brief Tekst opcji wyświetlania wszystkich książek.
+  inline static const std::string WYSWIETL_WSZYSTKIE_KSIAZKI
+    = "Wyświetl wszystkie książki";
+  /// @brief Tekst opcji wyświetlania książek w sklepie.
+  inline static const std::string WYSWIETL_KSIAZKI_SKLEP
+    = "Wyświetl książki w sklepie";
+  /// @brief Tekst opcji wyświetlania sprzedanych książek.
+  inline static const std::string WYSWIETL_SPRZEDANE
+    = "Wyświetl książki sprzedane";
 
-void czekajNaEnter()
+  /// @brief Tekst opcji dodawania użytkownika.
+  inline static const std::string DODAJ_UZYTKOWNIKA = "Dodaj użytkownika";
+  /// @brief Tekst opcji usuwania użytkownika.
+  inline static const std::string USUN_UZYTKOWNIKA = "Usuń użytkownika";
+  /// @brief Tekst opcji wyświetlania użytkowników.
+  inline static const std::string WYSWIETL_UZYTKOWNIKOW
+    = "Wyświetl użytkowników";
+
+  /// @brief Tekst opcji kupna książki przez użytkownika.
+  inline static const std::string KUP_KSIAZKE = "Kup książkę (Skup)";
+  /// @brief Tekst opcji sprzedaży książki do sklepu.
+  inline static const std::string SPRZEDAJ_KSIAZKE
+    = "Sprzedaj książkę (do sklepu)";
+  /// @brief Tekst opcji usuwania własnej książki.
+  inline static const std::string USUN_SWOJA_KSIAZKE = "Usuń swoją książkę";
+
+  /// @brief Tekst opcji wylogowania.
+  inline static const std::string WYLOGUJ = "Wyloguj";
+
+  /**
+   * @brief Zwraca wektor wszystkich opcji dostępnych dla administratora.
+   * @return Wektor stringów z nazwami opcji.
+   */
+  static std::vector<string> PobierzOpcjeAdmina()
+  {
+    return {
+      DODAJ_KSIAZKE,      USUN_KSIAZKE,           WYSWIETL_WSZYSTKIE_KSIAZKI,
+      DODAJ_UZYTKOWNIKA,  USUN_UZYTKOWNIKA,       WYSWIETL_UZYTKOWNIKOW,
+      WYSWIETL_SPRZEDANE, WYSWIETL_KSIAZKI_SKLEP, WYLOGUJ};
+  }
+
+  /**
+   * @brief Zwraca wektor wszystkich opcji dostępnych dla zwykłego użytkownika.
+   * @return Wektor stringów z nazwami opcji.
+   */
+  static std::vector<string> PobierzOpcjeUzytkownika()
+  {
+    return {KUP_KSIAZKE, SPRZEDAJ_KSIAZKE, USUN_SWOJA_KSIAZKE,
+            WYSWIETL_KSIAZKI_SKLEP, WYLOGUJ};
+  }
+};
+
+/**
+ * @brief Klasa zarządzająca interfejsem użytkownika i logiką biznesową
+ * księgarni. Korzysta z klasy Display do wyświetlania danych.
+ */
+class KsiegarniaUI
 {
-    cout << "\nNaciśnij ENTER, aby kontynuować...";
-    string tmp;
-    getline(cin, tmp);
-}
+private:
+  list<Ksiazka> &listaKsiazek;
+  list<Uzytkownik> &listaUzytkownikow;
+  string current_user_id;
 
-void odczytajUzytkownikow(list<Uzytkownik>& uzytkownicy)
-{
-    ifstream plik("uzytkownicy.txt");
-    string linia;
-    uzytkownicy.clear();
+  /**
+   * @brief Wyświetla sformatowany komunikat w ramce i oczekuje na
+   * potwierdzenie.
+   * @param tytul Tytuł sekcji.
+   * @param tresc Treść komunikatu.
+   */
+  void pokazKomunikat(const string &tytul, const string &tresc)
+  {
+    Display::clear();
+    Display::isBox = true;
+    Display::add(make_unique<string>(tytul + "\n"));
+    Display::sectionBreak();
+    Display::add(make_unique<string>(tresc + "\n"));
+    Display::ask({"Ok"});
+    Display::show();
+  }
 
-    while (getline(plik, linia))
-    {
-        stringstream ss(linia);
-        string id, imie, nazwisko, haslo_zaszyfrowane;
+  /**
+   * @brief Tworzy sformatowany ciąg znaków reprezentujący książkę.
+   * @param k Obiekt książki.
+   * @return Sformatowany string.
+   */
+  string formatujKsiazke(const Ksiazka &k)
+  {
+    stringstream ss;
+    ss << "[" << k.id << "] " << k.tytul << " - " << k.autor << " ("
+       << (k.id2 == "sklep" ? "sklep" : "użytkownik " + k.id2) << ") - "
+       << k.cena << " zł";
+    return ss.str();
+  }
 
-        if (getline(ss, id, ';') && getline(ss, imie, ';') &&
-            getline(ss, nazwisko, ';') && getline(ss, haslo_zaszyfrowane, ';'))
-        {
-            string haslo = xorString(haslo_zaszyfrowane, KLUCZ_SZYFROWANIA);
-            uzytkownicy.push_back(Uzytkownik(imie, nazwisko, id, haslo));
-        }
-    }
-    plik.close();
-}
+  /**
+   * @brief Wyświetla listę opcji i pozwala użytkownikowi wybrać jedną z nich.
+   * @param tytul Tytuł ekranu.
+   * @param opcje Lista dostępnych opcji do wyboru.
+   * @param prompt Pytanie zadawane użytkownikowi.
+   * @return Wybrana opcja jako string lub pusty string, jeśli wybrano powrót.
+   */
+  string wybierzZListy(const string &tytul, const vector<string> &opcje,
+                       const string &prompt)
+  {
+    Display::clear();
+    Display::isBox = true;
+    Display::add(make_unique<string>(tytul + "\n"));
 
-void odczytajKsiazki(list<Ksiazka>& ksiazki)
-{
-    ifstream plik("ksiazki.txt");
-    string linia;
-    ksiazki.clear();
+    if(opcje.empty())
+      {
+        return "";
+      }
 
-    while (getline(plik, linia))
-    {
-        stringstream ss(linia);
-        string id, tytul, autor, cena_str, id2;
+    Display::Question q;
+    q.prompt = prompt + "\n";
+    q.options = opcje;
+    q.options.push_back("Wróć");
 
-        if (getline(ss, id, ';') && getline(ss, tytul, ';') &&
-            getline(ss, autor, ';') && getline(ss, cena_str, ';') &&
-            getline(ss, id2, ';'))
-        {
-            float cena = stof(cena_str);
-            ksiazki.push_back(Ksiazka(tytul, autor, cena, id, id2));
-        }
-    }
-    plik.close();
-}
+    auto result = Display::multiQuestion({q});
+    if(result.empty() || result[0] == "Wróć")
+      return "";
+    return result[0];
+  }
+
+public:
+  /**
+   * @brief Konstruktor klasy KsiegarniaUI.
+   * @param ksiazki Referencja do listy książek.
+   * @param uzytkownicy Referencja do listy użytkowników.
+   */
+  KsiegarniaUI(list<Ksiazka> &ksiazki, list<Uzytkownik> &uzytkownicy)
+      : listaKsiazek(ksiazki), listaUzytkownikow(uzytkownicy)
+  {}
+
+  /**
+   * @brief Ustawia ID aktualnie zalogowanego użytkownika.
+   * @param id ID użytkownika.
+   */
+  void ustawZalogowanegoUzytkownika(const string &id) { current_user_id = id; }
+
+  /**
+   * @brief Obsługuje proces dodawania nowej książki przez administratora.
+   */
+  void dodajKsiazke()
+  {
+    Display::clear();
+    Display::isBox = true;
+    Display::add(make_unique<string>("DODAJ KSIĄŻKĘ\n"));
+
+    vector<Display::Question> questions
+      = {{"Podaj tytuł", {}}, {"Podaj autora", {}}, {"Podaj cenę", {}}};
+
+    auto answers = Display::multiQuestion(questions);
+    if(answers.size() < 3)
+      return;
+
+    string tytul = answers[0];
+    string autor = answers[1];
+    string cena_str = answers[2];
+    float cena = 0.0f;
+
+    try
+      {
+        cena = stof(cena_str);
+      }
+    catch(...)
+      {
+        pokazKomunikat("Błąd", "Błędna cena!");
+        return;
+      }
+
+    string nowy_id
+      = tytul.substr(0, 3) + autor.substr(0, 3) + to_string(rand() % 1000);
+    listaKsiazek.push_back(Ksiazka(tytul, autor, cena, nowy_id, "sklep"));
+    Ksiazka::zapiszKsiazki(listaKsiazek);
+
+    pokazKomunikat("Sukces", "Dodano książkę do sklepu!");
+  }
+
+  /**
+   * @brief Obsługuje proces usuwania książki z systemu.
+   */
+  void usunKsiazke()
+  {
+    vector<string> opcje;
+    vector<string> ids;
+    for(const auto &k : listaKsiazek)
+      {
+        opcje.push_back(formatujKsiazke(k));
+        ids.push_back(k.id);
+      }
+
+    if(opcje.empty())
+      {
+        pokazKomunikat("Usuń książkę", "Brak książek do usunięcia.");
+        return;
+      }
+
+    string wybor
+      = wybierzZListy("USUŃ KSIĄŻKĘ", opcje, "Wybierz książkę do usunięcia:");
+    if(wybor.empty())
+      return;
+
+    string id_to_remove = "";
+    int index = 0;
+    for(const auto &opt : opcje)
+      {
+        if(opt == wybor)
+          {
+            id_to_remove = ids[index];
+            break;
+          }
+        index++;
+      }
+
+    if(!id_to_remove.empty())
+      {
+        size_t stary_rozmiar = listaKsiazek.size();
+        Ksiazka::usunKsiazke(listaKsiazek, id_to_remove);
+        if(listaKsiazek.size() < stary_rozmiar)
+          {
+            Ksiazka::zapiszKsiazki(listaKsiazek);
+            pokazKomunikat("Sukces", "Usunięto książkę!");
+          }
+      }
+  }
+
+  /**
+   * @brief Wyświetla listę książek, filtrując je według typu.
+   * @param filterType Typ filtrowania: "all", "sklep", "sprzedane".
+   */
+  void wyswietlKsiazki(const string &filterType = "all")
+  {
+    Display::clear();
+    Display::isBox = true;
+
+    string title = "LISTA KSIĄŻEK\n";
+    if(filterType == "sklep")
+      title = "KSIĄŻKI W SKLEPIE\n";
+    if(filterType == "sprzedane")
+      title = "KSIĄŻKI SPRZEDANE (U UŻYTKOWNIKÓW)\n";
+
+    Display::add(make_unique<string>(title));
+
+    bool found = false;
+    for(const auto &k : listaKsiazek)
+      {
+        bool show = false;
+        if(filterType == "all")
+          show = true;
+        else if(filterType == "sklep" && k.id2 == "sklep")
+          show = true;
+        else if(filterType == "sprzedane" && k.id2 != "sklep")
+          show = true;
+
+        if(show)
+          {
+            Display::add(make_unique<string>(formatujKsiazke(k) + "\n"));
+            found = true;
+          }
+      }
+
+    if(!found)
+      {
+        Display::add(make_unique<string>("Brak książek w tej kategorii.\n"));
+      }
+
+    Display::ask({"Wróć"});
+    Display::show();
+  }
+
+  /**
+   * @brief Obsługuje proces dodawania nowego użytkownika.
+   */
+  void dodajUzytkownika()
+  {
+    Display::clear();
+    Display::isBox = true;
+    Display::add(make_unique<string>("DODAJ UŻYTKOWNIKA\n"));
+
+    vector<Display::Question> questions
+      = {{"Podaj imię", {}}, {"Podaj nazwisko", {}}, {"Podaj hasło", {}}};
+
+    auto answers = Display::multiQuestion(questions);
+    if(answers.size() < 3)
+      return;
+
+    string imie = answers[0];
+    string nazwisko = answers[1];
+    string haslo = answers[2];
+
+    string nowy_id
+      = imie.substr(0, 3) + nazwisko.substr(0, 3) + to_string(rand() % 1000);
+    listaUzytkownikow.push_back(Uzytkownik(imie, nazwisko, nowy_id, haslo));
+    Uzytkownik::zapiszUzytkownika(listaUzytkownikow);
+
+    pokazKomunikat("Sukces", "Dodano użytkownika (" + nowy_id + ")!");
+  }
+
+  /**
+   * @brief Obsługuje proces usuwania użytkownika.
+   */
+  void usunUzytkownika()
+  {
+    vector<string> opcje;
+    vector<string> ids;
+    for(const auto &u : listaUzytkownikow)
+      {
+        opcje.push_back("[" + u.id + "] " + u.imie + " " + u.nazwisko);
+        ids.push_back(u.id);
+      }
+
+    if(opcje.empty())
+      {
+        pokazKomunikat("Usuń użytkownika", "Brak użytkowników do usunięcia.");
+        return;
+      }
+
+    string wybor
+      = wybierzZListy("USUŃ UŻYTKOWNIKA", opcje, "Wybierz użytkownika:");
+    if(wybor.empty())
+      return;
+
+    string id_to_remove = "";
+    int index = 0;
+    for(const auto &opt : opcje)
+      {
+        if(opt == wybor)
+          {
+            id_to_remove = ids[index];
+            break;
+          }
+        index++;
+      }
+
+    size_t stary_rozmiar = listaUzytkownikow.size();
+    Uzytkownik::usunUzytkownika(listaUzytkownikow, id_to_remove);
+
+    if(listaUzytkownikow.size() < stary_rozmiar)
+      {
+        Uzytkownik::zapiszUzytkownika(listaUzytkownikow);
+        pokazKomunikat("Sukces", "Usunięto użytkownika.");
+      }
+    else
+      {
+        pokazKomunikat("Błąd", "Nie znaleziono użytkownika.");
+      }
+  }
+
+  /**
+   * @brief Wyświetla listę wszystkich zarejestrowanych użytkowników.
+   */
+  void wyswietlUzytkownikow()
+  {
+    Display::clear();
+    Display::isBox = true;
+    Display::add(make_unique<string>("LISTA UŻYTKOWNIKÓW\n"));
+
+    if(listaUzytkownikow.empty())
+      {
+        Display::add(make_unique<string>("Brak użytkowników!\n"));
+      }
+    else
+      {
+        for(const auto &u : listaUzytkownikow)
+          {
+            Display::add(make_unique<string>("[" + u.id + "] " + u.imie + " "
+                                             + u.nazwisko + "\n"));
+          }
+      }
+    Display::ask({"Wróć"});
+    Display::show();
+  }
+
+  /**
+   * @brief Obsługuje proces kupna książki przez zalogowanego użytkownika.
+   */
+  void kupKsiazke()
+  {
+    vector<string> opcje;
+    vector<string> ids;
+
+    for(const auto &k : listaKsiazek)
+      {
+        if(k.id2 == "sklep")
+          {
+            opcje.push_back(formatujKsiazke(k));
+            ids.push_back(k.id);
+          }
+      }
+
+    if(opcje.empty())
+      {
+        pokazKomunikat("Kup książkę", "Brak książek w sklepie.");
+        return;
+      }
+
+    string wybor = wybierzZListy("DOSTĘPNE KSIĄŻKI W SKLEPIE", opcje,
+                                 "Wybierz książkę do kupienia:");
+    if(wybor.empty())
+      return;
+
+    string id_ksiazki = "";
+    int index = 0;
+    for(const auto &opt : opcje)
+      {
+        if(opt == wybor)
+          {
+            id_ksiazki = ids[index];
+            break;
+          }
+        index++;
+      }
+
+    bool kupiono = false;
+    for(auto &k : listaKsiazek)
+      {
+        if(k.id == id_ksiazki && k.id2 == "sklep")
+          {
+            k.id2 = current_user_id;
+            kupiono = true;
+            break;
+          }
+      }
+
+    if(kupiono)
+      {
+        Ksiazka::zapiszKsiazki(listaKsiazek);
+        pokazKomunikat("Sukces", "Pomyślnie kupiono książkę!");
+      }
+    else
+      {
+        pokazKomunikat("Błąd", "Książka nie jest już dostępna.");
+      }
+  }
+
+  /**
+   * @brief Obsługuje proces sprzedaży książki przez użytkownika do sklepu.
+   */
+  void sprzedajKsiazke()
+  {
+    vector<string> opcje;
+    vector<string> ids;
+
+    for(const auto &k : listaKsiazek)
+      {
+        if(k.id2 == current_user_id)
+          {
+            opcje.push_back(formatujKsiazke(k));
+            ids.push_back(k.id);
+          }
+      }
+
+    if(opcje.empty())
+      {
+        pokazKomunikat("Sprzedaj książkę", "Nie posiadasz żadnych książek.");
+        return;
+      }
+
+    string wybor = wybierzZListy("TWOJE KSIĄŻKI", opcje,
+                                 "Wybierz książkę do sprzedaży sklepowi:");
+    if(wybor.empty())
+      return;
+
+    string id_ksiazki = "";
+    int index = 0;
+    for(const auto &opt : opcje)
+      {
+        if(opt == wybor)
+          {
+            id_ksiazki = ids[index];
+            break;
+          }
+        index++;
+      }
+
+    bool sprzedano = false;
+    for(auto &k : listaKsiazek)
+      {
+        if(k.id == id_ksiazki && k.id2 == current_user_id)
+          {
+            k.id2 = "sklep";
+            sprzedano = true;
+            break;
+          }
+      }
+
+    if(sprzedano)
+      {
+        Ksiazka::zapiszKsiazki(listaKsiazek);
+        pokazKomunikat("Sukces", "Pomyślnie sprzedano książkę sklepowi!");
+      }
+    else
+      {
+        pokazKomunikat("Błąd", "Nie posiadasz takiej książki.");
+      }
+  }
+
+  /**
+   * @brief Obsługuje proces trwałego usuwania książki przez użytkownika.
+   */
+  void usunSwojaKsiazke()
+  {
+    vector<string> opcje;
+    vector<string> ids;
+
+    for(const auto &k : listaKsiazek)
+      {
+        if(k.id2 == current_user_id)
+          {
+            opcje.push_back(formatujKsiazke(k));
+            ids.push_back(k.id);
+          }
+      }
+
+    if(opcje.empty())
+      {
+        pokazKomunikat("Usuń swoją książkę", "Nie posiadasz żadnych książek.");
+        return;
+      }
+
+    string wybor = wybierzZListy("TWOJE KSIĄŻKI", opcje,
+                                 "Wybierz książkę do trwałego usunięcia:");
+    if(wybor.empty())
+      return;
+
+    string id_ksiazki = "";
+    int index = 0;
+    for(const auto &opt : opcje)
+      {
+        if(opt == wybor)
+          {
+            id_ksiazki = ids[index];
+            break;
+          }
+        index++;
+      }
+
+    size_t stary_rozmiar = listaKsiazek.size();
+    bool wlasciciel = false;
+    for(const auto &k : listaKsiazek)
+      {
+        if(k.id == id_ksiazki && k.id2 == current_user_id)
+          {
+            wlasciciel = true;
+            break;
+          }
+      }
+
+    if(wlasciciel)
+      {
+        Ksiazka::usunKsiazke(listaKsiazek, id_ksiazki);
+        if(listaKsiazek.size() < stary_rozmiar)
+          {
+            Ksiazka::zapiszKsiazki(listaKsiazek);
+            pokazKomunikat("Sukces", "Usunięto książkę.");
+          }
+      }
+    else
+      {
+        pokazKomunikat("Błąd", "Nie udało się usunąć książki.");
+      }
+  }
+};
 
 int main()
 {
 #ifdef _WIN32
-    SetConsoleOutputCP(65001);
-    SetConsoleCP(65001);
+  SetConsoleOutputCP(65001);
+  SetConsoleCP(65001);
 #endif
-    setlocale(LC_ALL, "pl_PL.UTF-8");
+  setlocale(LC_ALL, "pl_PL.UTF-8");
+  srand(time(0));
 
-    srand(time(0));
+  list<Ksiazka> listaKsiazek;
+  list<Uzytkownik> listaUzytkownikow;
+  Ksiazka::odczytajKsiazki(listaKsiazek);
+  Uzytkownik::odczytajUzytkownikow(listaUzytkownikow);
 
-    list<Ksiazka> listaKsiazek;
-    list<Uzytkownik> listaUzytkownikow;
+  KsiegarniaUI ui(listaKsiazek, listaUzytkownikow);
 
-    odczytajKsiazki(listaKsiazek);
-    odczytajUzytkownikow(listaUzytkownikow);
-
-    string login, haslo, opcja, user_input;
-    string current_user_id;
-
-    while (true)
+  while(true)
     {
-        wyczyscKonsole();
+      Display::clear();
+      Display::isBox = true;
+      Display::add(make_unique<string>("KSIĘGARNIA - LOGOWANIE\n"));
 
-        cout << "┌──────────────── KSIĘGARNIA ────────────────┐" << endl;
-        cout << "│ Login: ";
-        getline(cin, login);
-        cout << "│ Hasło: ";
-        getline(cin, haslo);
+      vector<Display::Question> loginForm = {{"Login", {}}, {"Hasło", {}}};
 
-        bool jest_admin = (login == "admin" && haslo == "admin");
-        bool jest_uzytkownik = false;
+      auto credentials = Display::multiQuestion(loginForm);
+      if(credentials.size() < 2)
+        continue;
 
-        for (const auto& u : listaUzytkownikow)
+      string login = credentials[0];
+      string haslo = credentials[1];
+
+      bool jest_admin = (login == "admin" && haslo == "admin");
+      bool jest_uzytkownik = false;
+      string user_id = "";
+
+      if(!jest_admin)
         {
-            if (u.czyPoprawneDaneLogowania(login, haslo))
+          for(const auto &u : listaUzytkownikow)
             {
-                jest_uzytkownik = true;
-                current_user_id = u.id;
-                break;
-            }
-        }
-
-        if (!jest_admin && !jest_uzytkownik)
-        {
-            cout << "├────────────────────────────────────────────┤" << endl;
-            cout << "│ Błędne dane logowania!                     │" << endl;
-            cout << "└────────────────────────────────────────────┘" << endl;
-            czekajNaEnter();
-            continue;
-        }
-        else{
-          cout << "└────────────────────────────────────────────┘" << endl;
-        }
-
-        bool wylogowano = false;
-        while (!wylogowano)
-        {
-            wyczyscKonsole();
-
-            if (jest_admin)
-            {
-                // === MENU ADMINA ===
-                cout << "┌──────────────── KSIĘGARNIA ────────────────┐" << endl;
-                cout << "│ Witaj, Admin!" << endl;
-                cout << "├────────────────────────────────────────────┤" << endl;
-                cout << "│ w - dodaj książkę do sklepu                │" << endl;
-                cout << "│ a - usuń książkę                           │" << endl;
-                cout << "│ s - wyświetl wszystkie książki             │" << endl;
-                cout << "├────────────────────────────────────────────┤" << endl;
-                cout << "│ d - dodaj użytkownika                      │" << endl;
-                cout << "│ q - usuń użytkownika                       │" << endl;
-                cout << "│ e - wyświetl użytkowników                  │" << endl;
-                cout << "├────────────────────────────────────────────┤" << endl;
-                cout << "│ r - książki sprzedane (u użytkowników)     │" << endl;
-                cout << "│ f - książki w sklepie                      │" << endl;
-                cout << "├────────────────────────────────────────────┤" << endl;
-                cout << "│ z - wyloguj                                │" << endl;
-                cout << "└────────────────────────────────────────────┘" << endl;
-                cout << "---> : ";
-                getline(cin, opcja);
-                char ch = opcja.empty() ? 0 : tolower(opcja[0]);
-
-                switch (ch)
+              if(u.czyPoprawneDaneLogowania(login, haslo))
                 {
-                    case 'w':  // dodaj książkę (tylko do sklepu)
-                    {
-                        string tytul, autor, cena_str;
-                        float cena = 0.0f;
-
-                        wyczyscKonsole();
-                        
-                        cout << "┌─────────────── DODAJ KSIĄŻKĘ ──────────────┐" << endl;
-                        cout << "│ Tytuł: ";
-                        getline(cin, tytul);
-                        cout << "│ Autor: ";
-                        getline(cin, autor);
-                        cout << "│ Cena: ";
-                        getline(cin, cena_str);
-
-                        try { cena = stof(cena_str); }
-                        catch (...) {
-                            cout << "│ Błędna cena!" << endl;
-                            czekajNaEnter();
-                            break;
-                        }
-
-                        string nowy_id = tytul.substr(0, 3) + autor.substr(0, 3) + to_string(rand() % 1000);
-                        listaKsiazek.push_back(Ksiazka(tytul, autor, cena, nowy_id, "sklep"));
-                        Ksiazka::zapiszKsiazki(listaKsiazek);
-                        cout << "├────────────────────────────────────────────┤" << endl;
-                        cout << "│ Dodano książkę do sklepu!                  │" << endl;
-                        cout << "└────────────────────────────────────────────┘" << endl;
-                        czekajNaEnter();
-                        break;
-                    }
-                    case 'a':  // usuń dowolną książkę
-                    {
-                        wyczyscKonsole();
-                        
-                        cout << "┌─────────────── USUŃ KSIĄŻKĘ ───────────────┐" << endl;
-                        bool ma = false;
-                        for (const auto& k : listaKsiazek)
-                        {
-                            ma = true;
-                            cout << "│ [" << k.id << "] " << k.tytul << " - " << k.autor
-                                 << " (" << (k.id2 == "sklep" ? "sklep" : "użytkownik " + k.id2) << ") - " << k.cena << " zł" << endl;
-                        }
-                        if (!ma)
-                        {
-                            cout << "│ Brak książek do usunięcia.                 │" << endl;
-                            cout << "└────────────────────────────────────────────┘" << endl;
-                            czekajNaEnter();
-                            break;
-                        }
-                        
-                        cout << "├────────────────────────────────────────────┤" << endl;
-                        cout << "│ Podaj ID książki do usunięcia: ";
-                        getline(cin, user_input);
-
-                        size_t stary_rozmiar = listaKsiazek.size();
-                        Ksiazka::usunKsiazke(listaKsiazek, user_input);
-                        cout << "├────────────────────────────────────────────┤" << endl;
-                        if (listaKsiazek.size() < stary_rozmiar)
-                        {
-                            Ksiazka::zapiszKsiazki(listaKsiazek);
-                            cout << "│ Usunięto książkę !                         │" << endl;
-                        }
-                        else
-                        {
-                            cout << "│ Nie znaleziono książki.                    │" << endl;
-                        }
-                        cout << "└────────────────────────────────────────────┘" << endl;
-                        czekajNaEnter();
-                        break;
-                    }
-                    case 's':  // wszystkie książki
-                    {
-                        wyczyscKonsole();
-                        
-                        cout << "┌──────────── WSZYSTKIE KSIĄŻKI ─────────────┐" << endl;
-                        if (listaKsiazek.empty())
-                            cout << "│ Brak książek!                              │" << endl;
-                        for (const auto& k : listaKsiazek)
-                        {
-                            cout << "│ [" << k.id << "] " << k.tytul << " - " << k.autor
-                                 << " (" << (k.id2 == "sklep" ? "sklep" : "użytk. " + k.id2) << ") - " << k.cena << " zł" << endl;
-                        }
-                        cout << "└────────────────────────────────────────────┘" << endl;
-
-                        czekajNaEnter();
-                        break;
-                    }
-                    case 'd':  // dodaj użytkownika
-                    {
-                        string imie, nazwisko, haslo_u;
-                        wyczyscKonsole();
-                        
-                        cout << "┌───────────── DODAJ UŻYTKOWNIKA ────────────┐" << endl;
-                        cout << "│ Imię: ";
-                        getline(cin, imie);
-                        cout << "│ Nazwisko: ";
-                        getline(cin, nazwisko);
-                        cout << "│ Hasło: ";
-                        getline(cin, haslo_u);
-
-                        string nowy_id = imie.substr(0, 3) + nazwisko.substr(0, 3) + to_string(rand() % 1000);
-                        listaUzytkownikow.push_back(Uzytkownik(imie, nazwisko, nowy_id, haslo_u));
-                        Uzytkownik::zapiszUzytkownika(listaUzytkownikow);
-
-                        cout << "├────────────────────────────────────────────┤" << endl;
-                        cout << "│ Dodano użytkownika ("<<nowy_id<<")!" << endl;
-                        cout << "└────────────────────────────────────────────┘" << endl;
-                        czekajNaEnter();
-                        break;
-                    }
-                    case 'q':  // usuń użytkownika
-                    {
-                        wyczyscKonsole();
-                        cout << "┌──────────── USUŃ UŻYTKOWNIKA ──────────────┐" << endl;
-                        bool ma = false;
-                        for (const auto& u : listaUzytkownikow)
-                        {
-                            ma = true;
-                            cout << "│ [" << u.id << "] " << u.imie << " " << u.nazwisko << endl;
-                        }
-                        if (!ma)
-                        {
-                            cout << "│ Brak użytkownków do usunięcia.             │" << endl;
-                            cout << "└────────────────────────────────────────────┘" << endl;
-                            czekajNaEnter();
-                            break;
-                        }
-                        cout << "├────────────────────────────────────────────┤" << endl;
-                        cout << "│ Podaj ID użytkownika do usunięcia: ";
-                        getline(cin, user_input);
-
-                        size_t stary_rozmiar = listaUzytkownikow.size();
-                        Uzytkownik::usunUzytkownika(listaUzytkownikow, user_input);
-                        cout << "├────────────────────────────────────────────┤" << endl;
-                        if (listaUzytkownikow.size() < stary_rozmiar)
-                        {
-                            Uzytkownik::zapiszUzytkownika(listaUzytkownikow);
-                            cout << "│ Usunięto użytkownika.                      │" << endl;
-                        }
-                        else
-                        {
-                            cout << "│ Nie znaleziono użytkownika.                │" << endl;
-                        }
-                        cout << "└────────────────────────────────────────────┘" << endl;
-                        czekajNaEnter();
-                        break;
-                    }
-                    case 'e':  // lista użytkowników
-                    {
-                        wyczyscKonsole();
-                        cout << "┌──────────── LISTA UŻYTKOWNIKÓW ────────────┐" << endl;
-                        if (listaUzytkownikow.empty())
-                            cout << "│ Brak użytkowników!                         │" << endl;
-                        for (const auto& u : listaUzytkownikow)
-                        {
-                            cout << "│ [" << u.id << "] " << u.imie << " " << u.nazwisko << endl;
-                        }
-                        cout << "└────────────────────────────────────────────┘" << endl;
-                        czekajNaEnter();
-                        break;
-                    }
-                    case 'r':  // książki sprzedane (u użytkowników)
-                    {
-                        wyczyscKonsole();
-                        
-                        cout << "┌──── KSIĄŻKI SPRZEDANE (U UŻYTKOWNIKÓW) ────┐" << endl;
-                        bool ma = false;
-                        for (const auto& k : listaKsiazek)
-                        {
-                            if (k.id2 != "sklep")
-                            {
-                                ma = true;
-                                cout << "│ [" << k.id << "] " << k.tytul << " - u użytkownika " << k.id2 << endl;
-                            }
-                        }
-                        if (!ma) cout << "│ Brak sprzedanych książek.                  │" << endl;
-                        cout << "└────────────────────────────────────────────┘" << endl;
-                        czekajNaEnter();
-                        break;
-                    }
-                    case 'f':  // książki w sklepie
-                    {
-                        wyczyscKonsole();
-                        
-                        cout << "┌──────────── KSIĄŻKI W SKLEPIE ─────────────┐" << endl;
-                        bool ma = false;
-                        for (const auto& k : listaKsiazek)
-                        {
-                            if (k.id2 == "sklep")
-                            {
-                                ma = true;
-                                cout << "│ [" << k.id << "] " << k.tytul << " - " << k.autor << " - " << k.cena << " zł" << endl;
-                            }
-                        }
-                        if (!ma) cout << "│ Brak książek w sklepie.                    │" << endl;
-                        cout << "└────────────────────────────────────────────┘" << endl;
-                        czekajNaEnter();
-                        break;
-                    }
-                    case 'z':
-                        wylogowano = true;
-                        break;
+                  jest_uzytkownik = true;
+                  user_id = u.id;
+                  break;
                 }
             }
-            else  // === MENU ZWYKŁEGO UŻYTKOWNIKA ===
+        }
+
+      if(!jest_admin && !jest_uzytkownik)
+        {
+          Display::clear();
+          Display::isBox = true;
+          Display::add(make_unique<string>("Błędne dane logowania!\n"));
+          Display::ask({"Spróbuj ponownie"});
+          Display::show();
+          continue;
+        }
+
+      ui.ustawZalogowanegoUzytkownika(jest_admin ? "admin" : user_id);
+      bool wylogowano = false;
+
+      while(!wylogowano)
+        {
+          Display::clear();
+          Display::isBox = true;
+
+          string naglowek
+            = jest_admin ? "Witaj, Admin!\n" : ("Witaj, " + login + "!\n");
+          Display::add(make_unique<string>(naglowek));
+          Display::sectionBreak();
+
+          vector<string> opcjeMenu;
+          if(jest_admin)
+            opcjeMenu = MenuOpcje::PobierzOpcjeAdmina();
+          else
+            opcjeMenu = MenuOpcje::PobierzOpcjeUzytkownika();
+
+          Display::Question menuQ;
+          menuQ.prompt = "Wybierz akcję:\n";
+          menuQ.options = opcjeMenu;
+
+          auto response = Display::multiQuestion({menuQ});
+          string opcja = response.empty() ? "" : response[0];
+
+          if(opcja == MenuOpcje::WYLOGUJ)
             {
-                cout << "┌──────────────── KSIĘGARNIA ────────────────┐" << endl;
-                cout << "│ Witaj, " << login << "!" << endl;
-                cout << "├────────────────────────────────────────────┤" << endl;
-                cout << "│ r - kup książkę                            │" << endl;
-                cout << "│ f - sprzedaj książkę sklepowi              │" << endl;
-                cout << "│ a - usuń swoją książkę                     │" << endl;
-                cout << "│ s - wyświetl książki w sklepie             │" << endl;
-                cout << "├────────────────────────────────────────────┤" << endl;
-                cout << "│ z - wyloguj                                │" << endl;
-                cout << "└────────────────────────────────────────────┘" << endl;
-                cout << "---> : ";
-                getline(cin, opcja);
-                char ch = opcja.empty() ? 0 : tolower(opcja[0]);
-
-                switch (ch)
-                {
-                    case 'r':  // kup książkę
-                    {
-                        wyczyscKonsole();
-    
-                        cout << "┌──────── DOSTĘPNE KSIĄŻKI W SKLEPIE ────────┐" << endl;
-                        bool ma = false;
-                        for (const auto& k : listaKsiazek)
-                        {
-                            if (k.id2 == "sklep")
-                            {
-                                ma = true;
-                                cout << "│ [" << k.id << "] " << k.tytul << " - " << k.autor << " - " << k.cena << " zł" << endl;
-                            }
-                        }
-                        if (!ma)
-                        {
-                            cout << "│ Brak książek w sklepie.                    │" << endl;
-                            cout << "└────────────────────────────────────────────┘" << endl;
-                            czekajNaEnter();
-                            break;
-                        }
-                        cout << "├────────────────────────────────────────────┤" << endl;
-                        cout << "│ Podaj ID książki do kupna: ";
-                        getline(cin, user_input);
-
-                        bool kupiono = false;
-                        for (auto& k : listaKsiazek)
-                        {
-                            if (k.id == user_input && k.id2 == "sklep")
-                            {
-                                k.id2 = current_user_id;
-                                kupiono = true;
-                                break;
-                            }
-                        }
-                        
-                        cout << "├────────────────────────────────────────────┤" << endl;
-                        if (kupiono)
-                        {
-                            Ksiazka::zapiszKsiazki(listaKsiazek);
-                            cout << "│ Pomyślnie kupiono książkę!                 │" << endl;
-                        }
-                        else
-                        {
-                            cout << "│ Książka nie jest dostępna w sklepie.       │" << endl;
-                        }
-                        cout << "└────────────────────────────────────────────┘" << endl;
-                        czekajNaEnter();
-                        break;
-                    }
-                    case 'f':  // sprzedaj/s kup do sklepu
-                    {
-                        wyczyscKonsole();
-                        
-                        cout << "┌────────────── TWOJE KSIĄŻKI ───────────────┐" << endl;
-                        bool ma = false;
-                        for (const auto& k : listaKsiazek)
-                        {
-                            if (k.id2 == current_user_id)
-                            {
-                                ma = true;
-                                cout << "│ [" << k.id << "] " << k.tytul << " - " << k.autor << " - " << k.cena << " zł" << endl;
-                            }
-                        }
-                        if (!ma)
-                        {
-                            cout << "│ Nie posiadasz żadnych książek.             │" << endl;
-                            cout << "└────────────────────────────────────────────┘" << endl;
-                            czekajNaEnter();
-                            break;
-                        }
-                        cout << "├────────────────────────────────────────────┤" << endl;
-                        cout << "│ Podaj ID książki do sprzedaży sklepowi: ";
-                        getline(cin, user_input);
-
-                        bool sprzedano = false;
-                        for (auto& k : listaKsiazek)
-                        {
-                            if (k.id == user_input && k.id2 == current_user_id)
-                            {
-                                k.id2 = "sklep";
-                                sprzedano = true;
-                                break;
-                            }
-                        }
-                        cout << "├────────────────────────────────────────────┤" << endl;
-                        if (sprzedano)
-                        {
-                            Ksiazka::zapiszKsiazki(listaKsiazek);
-                            cout << "│ Pomyślnie sprzedano książkę sklepowi!      │" << endl;
-                        }
-                        else
-                        {
-                            cout << "│ Nie posiadasz takiej książki.              │" << endl;
-                        }
-                        cout << "└────────────────────────────────────────────┘" << endl;
-                        czekajNaEnter();
-                        break;
-                    }
-                    case 'a':  // usuń swoją książkę
-                    {
-                        wyczyscKonsole();
-                        
-                        cout << "┌────────────── TWOJE KSIĄŻKI ───────────────┐" << endl;
-                        bool ma = false;
-                        for (const auto& k : listaKsiazek)
-                        {
-                            if (k.id2 == current_user_id)
-                            {
-                                ma = true;
-                                cout << "│ [" << k.id << "] " << k.tytul << " - " << k.autor << " - " << k.cena << " zł" << endl;
-                            }
-                        }
-                        if (!ma)
-                        {
-                            cout << "│ Nie posiadasz żadnych książek.             │" << endl;
-                            cout << "└────────────────────────────────────────────┘" << endl;
-                            czekajNaEnter();
-                            break;
-                        }
-                        cout << "├────────────────────────────────────────────┤" << endl;
-                        cout << "│ Podaj ID książki do usunięcia:";
-                        getline(cin, user_input);
-
-                        bool jest_wlasna = false;
-                        for (const auto& k : listaKsiazek)
-                        {
-                            if (k.id == user_input && k.id2 == current_user_id)
-                            {
-                                jest_wlasna = true;
-                                break;
-                            }
-                        }
-                        
-                        cout << "├────────────────────────────────────────────┤" << endl;
-                        if (jest_wlasna)
-                        {
-                            size_t stary_rozmiar = listaKsiazek.size();
-                            Ksiazka::usunKsiazke(listaKsiazek, user_input);
-                            if (listaKsiazek.size() < stary_rozmiar)
-                            {
-                                Ksiazka::zapiszKsiazki(listaKsiazek);
-                                cout << "│ Usunięto książkę.                          │" << endl;
-                            }
-                        }
-                        else
-                        {
-                            cout << "│ Nie posiadasz takiej książki.              │" << endl;
-                        }
-                        cout << "└────────────────────────────────────────────┘" << endl;
-                        czekajNaEnter();
-                        break;
-                    }
-                    case 's':  // książki w sklepie
-                    {
-                        wyczyscKonsole();
-                        cout << "┌──────── DOSTĘPNE KSIĄŻKI W SKLEPIE ────────┐" << endl;
-                        bool ma = false;
-                        for (const auto& k : listaKsiazek)
-                        {
-                            if (k.id2 == "sklep")
-                            {
-                                ma = true;
-                                cout << "│ [" << k.id << "] " << k.tytul << " - " << k.autor << " - " << k.cena << " zł" << endl;
-                            }
-                        }
-                        if (!ma) cout << "│ Brak książek w sklepie.                    │" << endl;
-                        cout << "└────────────────────────────────────────────┘" << endl;
-                        czekajNaEnter();
-                        break;
-                    }
-                    case 'z':
-                        wylogowano = true;
-                        break;
-                    default:
-                        cout << "Nieznana opcja!" << endl;
-                        czekajNaEnter();
-                }
+              wylogowano = true;
+            }
+          else if(opcja == MenuOpcje::DODAJ_KSIAZKE)
+            {
+              ui.dodajKsiazke();
+            }
+          else if(opcja == MenuOpcje::USUN_KSIAZKE)
+            {
+              ui.usunKsiazke();
+            }
+          else if(opcja == MenuOpcje::WYSWIETL_WSZYSTKIE_KSIAZKI)
+            {
+              ui.wyswietlKsiazki("all");
+            }
+          else if(opcja == MenuOpcje::DODAJ_UZYTKOWNIKA)
+            {
+              ui.dodajUzytkownika();
+            }
+          else if(opcja == MenuOpcje::USUN_UZYTKOWNIKA)
+            {
+              ui.usunUzytkownika();
+            }
+          else if(opcja == MenuOpcje::WYSWIETL_UZYTKOWNIKOW)
+            {
+              ui.wyswietlUzytkownikow();
+            }
+          else if(opcja == MenuOpcje::WYSWIETL_SPRZEDANE)
+            {
+              ui.wyswietlKsiazki("sprzedane");
+            }
+          else if(opcja == MenuOpcje::WYSWIETL_KSIAZKI_SKLEP)
+            {
+              ui.wyswietlKsiazki("sklep");
+            }
+          else if(opcja == MenuOpcje::KUP_KSIAZKE)
+            {
+              ui.kupKsiazke();
+            }
+          else if(opcja == MenuOpcje::SPRZEDAJ_KSIAZKE)
+            {
+              ui.sprzedajKsiazke();
+            }
+          else if(opcja == MenuOpcje::USUN_SWOJA_KSIAZKE)
+            {
+              ui.usunSwojaKsiazke();
             }
         }
     }
 
-    return 0;
+  return 0;
 }

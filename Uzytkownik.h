@@ -7,22 +7,24 @@
 class Uzytkownik
 {
 public:
-    std::string imie;
-    std::string nazwisko;
-    std::string id;
-    std::string haslo;
+  std::string imie;
+  std::string nazwisko;
+  std::string id;
+  std::string haslo;
 
-    Uzytkownik(std::string i, std::string n, std::string ID, std::string h);
+  Uzytkownik(std::string i, std::string n, std::string ID, std::string h);
 
-    bool czyPoprawneDaneLogowania(const std::string &login,
-                                  const std::string &haslo) const;
+  bool czyPoprawneDaneLogowania(const std::string &login,
+                                const std::string &haslo) const;
 
-    static void zapiszUzytkownika(const std::list<Uzytkownik>& uzytkownicy);
-    static void usunUzytkownika(std::list<Uzytkownik>& uzytkownicy, const std::string& id);
+  static void zapiszUzytkownika(const std::list<Uzytkownik> &uzytkownicy);
+  static void
+  usunUzytkownika(std::list<Uzytkownik> &uzytkownicy, const std::string &id);
+  static void odczytajUzytkownikow(std::list<Uzytkownik> &uzytkownicy);
 };
 
 extern const std::string KLUCZ_SZYFROWANIA;
 
-std::string xorString(const std::string& input, const std::string& key);
+std::string xorString(const std::string &input, const std::string &key);
 
 #endif // UZYTKOWNIK_H
