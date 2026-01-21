@@ -1,3 +1,0 @@
-/workspaces/projektcpppk/build/CMakeFiles/MyProgram.dir
-/workspaces/projektcpppk/build/CMakeFiles/edit_cache.dir
-/workspaces/projektcpppk/build/CMakeFiles/rebuild_cache.dir

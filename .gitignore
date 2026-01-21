@@ -45,3 +45,4 @@
 out/Debug/*
 out/*
 compile_commands.json
+build/*
