@@ -1,6 +1,5 @@
 #include <cstdio>
 #include <iostream>
-#include <fstream>
 #include <memory>
 #include <string>
 #include <list>
@@ -9,7 +8,6 @@
 #include <ctime>
 #include <clocale>
 #include <vector>
-#include <algorithm>
 #include "Display.h"
 #include "Ksiazka.h"
 #include "Uzytkownik.h"
@@ -77,6 +75,44 @@ struct MenuOpcje
   {
     return {KUP_KSIAZKE, SPRZEDAJ_KSIAZKE, USUN_SWOJA_KSIAZKE,
             WYSWIETL_KSIAZKI_SKLEP, WYLOGUJ};
+  }
+};
+
+class RolaSystemu
+{
+public:
+  virtual std::vector<std::string> pobierzMenu() const = 0;
+
+  virtual std::string naglowekPowitalny(const std::string &login) const = 0;
+
+  virtual ~RolaSystemu() = default;
+};
+
+class RolaAdministrator : public RolaSystemu
+{
+public:
+  std::vector<std::string> pobierzMenu() const override
+  {
+    return MenuOpcje::PobierzOpcjeAdmina();
+  }
+
+  std::string naglowekPowitalny(const std::string &login) const override
+  {
+    return "Witaj, Administratorze systemu!\n";
+  }
+};
+
+class RolaKlient : public RolaSystemu
+{
+public:
+  std::vector<std::string> pobierzMenu() const override
+  {
+    return MenuOpcje::PobierzOpcjeUzytkownika();
+  }
+
+  std::string naglowekPowitalny(const std::string &login) const override
+  {
+    return "Witaj, " + login + "! (Klient)\n";
   }
 };
 
@@ -652,24 +688,31 @@ int main()
         }
 
       ui.ustawZalogowanegoUzytkownika(jest_admin ? "admin" : user_id);
+
       bool wylogowano = false;
 
+      std::unique_ptr<RolaSystemu> aktualnaRola;
+
+      if(jest_admin)
+
+        aktualnaRola = std::make_unique<RolaAdministrator>();
+
+      else
+
+        aktualnaRola = std::make_unique<RolaKlient>();
+
       while(!wylogowano)
+
         {
           Display::clear();
           Display::isBox = true;
 
-          string naglowek
-            = jest_admin ? "Witaj, Admin!\n" : ("Witaj, " + login + "!\n");
+          string naglowek = aktualnaRola->naglowekPowitalny(login);
+
           Display::add(make_unique<string>(naglowek));
           Display::sectionBreak();
 
-          vector<string> opcjeMenu;
-          if(jest_admin)
-            opcjeMenu = MenuOpcje::PobierzOpcjeAdmina();
-          else
-            opcjeMenu = MenuOpcje::PobierzOpcjeUzytkownika();
-
+          vector<string> opcjeMenu = aktualnaRola->pobierzMenu();
           Display::Question menuQ;
           menuQ.prompt = "Wybierz akcję:\n";
           menuQ.options = opcjeMenu;
