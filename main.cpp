@@ -1,4 +1,6 @@
 #include <cstdio>
+#include "Raport.h"
+#include <exception>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -135,6 +137,7 @@ private:
    */
   void pokazKomunikat(const string &tytul, const string &tresc)
   {
+    Raport::printf("Wyświeltam komunikat: {}", tytul);
     Display::clear();
     Display::isBox = true;
     Display::add(make_unique<string>(tytul + "\n"));
@@ -151,6 +154,7 @@ private:
    */
   string formatujKsiazke(const Ksiazka &k)
   {
+    Raport::printf("Sformatowano książkę");
     stringstream ss;
     ss << "[" << k.id << "] " << k.tytul << " - " << k.autor << " ("
        << (k.id2 == "sklep" ? "sklep" : "użytkownik " + k.id2) << ") - "
@@ -168,6 +172,7 @@ private:
   string wybierzZListy(const string &tytul, const vector<string> &opcje,
                        const string &prompt)
   {
+    Raport::printf("Wybrano z listy");
     Display::clear();
     Display::isBox = true;
     Display::add(make_unique<string>(tytul + "\n"));
@@ -196,7 +201,9 @@ public:
    */
   KsiegarniaUI(list<Ksiazka> &ksiazki, list<Uzytkownik> &uzytkownicy)
       : listaKsiazek(ksiazki), listaUzytkownikow(uzytkownicy)
-  {}
+  {
+    Raport::printf("Zainicjalizowano UI");
+  }
 
   /**
    * @brief Ustawia ID aktualnie zalogowanego użytkownika.
@@ -241,6 +248,7 @@ public:
     Ksiazka::zapiszKsiazki(listaKsiazek);
 
     pokazKomunikat("Sukces", "Dodano książkę do sklepu!");
+    Raport::printf("Dodano książkę o tytule: {}", tytul);
   }
 
   /**
@@ -289,6 +297,8 @@ public:
             pokazKomunikat("Sukces", "Usunięto książkę!");
           }
       }
+
+    Raport::printf("Usunięto {}", id_to_remove);
   }
 
   /**
@@ -333,6 +343,8 @@ public:
 
     Display::ask({"Wróć"});
     Display::show();
+
+    Raport::printf("Zakończono operację listy książek");
   }
 
   /**
@@ -361,6 +373,8 @@ public:
     Uzytkownik::zapiszUzytkownika(listaUzytkownikow);
 
     pokazKomunikat("Sukces", "Dodano użytkownika (" + nowy_id + ")!");
+
+    Raport::printf("Dodano użytkownika {}", nowy_id);
   }
 
   /**
@@ -411,6 +425,7 @@ public:
       {
         pokazKomunikat("Błąd", "Nie znaleziono użytkownika.");
       }
+    Raport::printf("Usunięto użytkownika: {}", id_to_remove);
   }
 
   /**
@@ -436,6 +451,8 @@ public:
       }
     Display::ask({"Wróć"});
     Display::show();
+
+    Raport::printf("Zakończono wyświetlanie użytkowników");
   }
 
   /**
@@ -498,6 +515,7 @@ public:
       {
         pokazKomunikat("Błąd", "Książka nie jest już dostępna.");
       }
+    Raport::printf("Użytkownik: {}, kupił: {}", current_user_id, id_ksiazki);
   }
 
   /**
@@ -560,6 +578,8 @@ public:
       {
         pokazKomunikat("Błąd", "Nie posiadasz takiej książki.");
       }
+
+    Raport::printf("Odsprzedano książkę: {}", id_ksiazki);
   }
 
   /**
@@ -626,11 +646,14 @@ public:
       {
         pokazKomunikat("Błąd", "Nie udało się usunąć książki.");
       }
+    Raport::printf("Użytkownik {} niszczy książkę {}", current_user_id,
+                   id_ksiazki);
   }
 };
 
 int main()
 {
+  Raport::init();
 #ifdef _WIN32
   SetConsoleOutputCP(65001);
   SetConsoleCP(65001);
@@ -642,8 +665,11 @@ int main()
   list<Uzytkownik> listaUzytkownikow;
   Ksiazka::odczytajKsiazki(listaKsiazek);
   Uzytkownik::odczytajUzytkownikow(listaUzytkownikow);
+  Raport::printf("Odczyt danych zakończony");
 
   KsiegarniaUI ui(listaKsiazek, listaUzytkownikow);
+
+  Raport::printf("Zakończono incjalizację programu");
 
   while(true)
     {
@@ -666,6 +692,7 @@ int main()
 
       if(!jest_admin)
         {
+          Raport::printf("Następuje próba zalogowania jako użytkownik");
           for(const auto &u : listaUzytkownikow)
             {
               if(u.czyPoprawneDaneLogowania(login, haslo))
@@ -694,9 +721,10 @@ int main()
       std::unique_ptr<RolaSystemu> aktualnaRola;
 
       if(jest_admin)
-
-        aktualnaRola = std::make_unique<RolaAdministrator>();
-
+        {
+          aktualnaRola = std::make_unique<RolaAdministrator>();
+          Raport::printf("Zalogowano jako administrator");
+        }
       else
 
         aktualnaRola = std::make_unique<RolaKlient>();
@@ -722,50 +750,63 @@ int main()
 
           if(opcja == MenuOpcje::WYLOGUJ)
             {
+              Raport::printf("Użytkownik wykonuje: WYLOGUJ");
               wylogowano = true;
             }
           else if(opcja == MenuOpcje::DODAJ_KSIAZKE)
             {
+              Raport::printf("Użytkownik wykonuje: DODAJ_KSIAZKE");
               ui.dodajKsiazke();
             }
           else if(opcja == MenuOpcje::USUN_KSIAZKE)
             {
+              Raport::printf("Użytkownik wykonuje: USUN_KSIAZKE");
               ui.usunKsiazke();
             }
           else if(opcja == MenuOpcje::WYSWIETL_WSZYSTKIE_KSIAZKI)
             {
+              Raport::printf(
+                "Użytkownik wykonuje: WYSWIETL_WSZYSTKIE_KSIAZKI");
               ui.wyswietlKsiazki("all");
             }
           else if(opcja == MenuOpcje::DODAJ_UZYTKOWNIKA)
             {
+              Raport::printf("Użytkownik wykonuje: DODAJ_UZYTKOWNIKA");
               ui.dodajUzytkownika();
             }
           else if(opcja == MenuOpcje::USUN_UZYTKOWNIKA)
             {
+              Raport::printf("Użytkownik wykonuje: USUN_UZYTKOWNIKA");
               ui.usunUzytkownika();
             }
           else if(opcja == MenuOpcje::WYSWIETL_UZYTKOWNIKOW)
             {
+              Raport::printf("Użytkownik wykonuje: WYSWIETL_UZYTKOWNIKOW");
               ui.wyswietlUzytkownikow();
             }
           else if(opcja == MenuOpcje::WYSWIETL_SPRZEDANE)
             {
+              Raport::printf("Użytkownik wykonuje: WYSWIETL_SPRZEDANE");
               ui.wyswietlKsiazki("sprzedane");
             }
           else if(opcja == MenuOpcje::WYSWIETL_KSIAZKI_SKLEP)
             {
+              Raport::printf("Użytkownik wykonuje: WYSWIETL_KSIAZKI_SKLEP");
               ui.wyswietlKsiazki("sklep");
             }
           else if(opcja == MenuOpcje::KUP_KSIAZKE)
             {
+              Raport::printf("Użytkownik wykonuje: KUP_KSIAZKE");
               ui.kupKsiazke();
             }
           else if(opcja == MenuOpcje::SPRZEDAJ_KSIAZKE)
             {
+              Raport::printf("Użytkownik wykonuje: SPRZEDAJ_KSIAZKE");
               ui.sprzedajKsiazke();
             }
           else if(opcja == MenuOpcje::USUN_SWOJA_KSIAZKE)
             {
+              Raport::printf("Użytkownik wykonuje: USUN_SWOJA_KSIAZKE");
               ui.usunSwojaKsiazke();
             }
         }
